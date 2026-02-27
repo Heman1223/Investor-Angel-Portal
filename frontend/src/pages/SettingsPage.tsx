@@ -20,20 +20,21 @@ export default function SettingsPage() {
     return (
         <div className="space-y-6 animate-fade-in">
             <div>
-                <h1 className="font-display text-3xl" style={{ color: 'var(--color-text-primary)' }}>Settings</h1>
+                <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Settings</h1>
                 <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Manage your account and preferences</p>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+            <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--color-bg-hover)', border: '1px solid var(--color-border-light)' }}>
                 {TABS.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all"
                         style={{
-                            background: activeTab === tab.id ? 'var(--color-bg-hover)' : 'transparent',
-                            color: activeTab === tab.id ? 'var(--color-gold)' : 'var(--color-text-muted)',
+                            background: activeTab === tab.id ? 'white' : 'transparent',
+                            color: activeTab === tab.id ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                            boxShadow: activeTab === tab.id ? 'var(--shadow-xs)' : 'none',
                         }}
                     >
                         <tab.icon size={15} />
@@ -63,8 +64,8 @@ function ProfileTab() {
     });
 
     return (
-        <div className="card max-w-lg">
-            <h3 className="font-display text-lg mb-4">Profile Information</h3>
+        <div className="card max-w-lg" style={{ padding: '28px' }}>
+            <h3 className="text-base font-bold mb-5" style={{ color: 'var(--color-text-primary)' }}>Profile Information</h3>
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Name</label>
@@ -98,8 +99,8 @@ function SecurityTab() {
     };
 
     return (
-        <div className="card max-w-lg">
-            <h3 className="font-display text-lg mb-4">Change Password</h3>
+        <div className="card max-w-lg" style={{ padding: '28px' }}>
+            <h3 className="text-base font-bold mb-5" style={{ color: 'var(--color-text-primary)' }}>Change Password</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Current Password</label>
@@ -140,8 +141,8 @@ function AlertConfigTab() {
     const c = form || config;
 
     return (
-        <div className="card max-w-lg">
-            <h3 className="font-display text-lg mb-4">Risk Alert Thresholds</h3>
+        <div className="card max-w-lg" style={{ padding: '28px' }}>
+            <h3 className="text-base font-bold mb-5" style={{ color: 'var(--color-text-primary)' }}>Risk Alert Thresholds</h3>
             <div className="space-y-4">
                 {[
                     { key: 'runwayWarningMonths', label: 'Runway Warning (months)', min: 0 },
@@ -198,9 +199,9 @@ function ExportTab() {
     };
 
     return (
-        <div className="card max-w-lg">
-            <h3 className="font-display text-lg mb-2">Export Your Data</h3>
-            <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>Download all your portfolio data as a JSON file.</p>
+        <div className="card max-w-lg" style={{ padding: '28px' }}>
+            <h3 className="text-base font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>Export Your Data</h3>
+            <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>Download all your portfolio data as a JSON file.</p>
             <button onClick={handleExport} className="btn btn-primary" disabled={exporting}>
                 <Download size={16} /> {exporting ? 'Exporting...' : 'Export All Data'}
             </button>
@@ -220,25 +221,37 @@ function AuditLogTab() {
 
     return (
         <div className="card" style={{ padding: 0 }}>
-            <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
-                <h3 className="font-display text-lg">Audit Log</h3>
+            <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--color-border-light)' }}>
+                <h3 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>Audit Log</h3>
             </div>
-            <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
-                <table>
-                    <thead><tr><th>Action</th><th>Entity</th><th>Date</th></tr></thead>
-                    <tbody>
-                        {data?.logs?.map((log: any) => (
-                            <tr key={log._id}>
-                                <td><span className="badge badge-blue">{log.action.replace(/_/g, ' ')}</span></td>
-                                <td className="text-xs">{log.entityType} ({log.entityId.slice(-6)})</td>
-                                <td className="text-xs">{formatDate(log.createdAt)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+            <table className="w-full">
+                <thead>
+                    <tr>
+                        <th style={{ padding: '10px 20px' }}>Action</th>
+                        <th style={{ padding: '10px 20px' }}>Entity</th>
+                        <th style={{ padding: '10px 20px' }}>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {data?.logs?.map((log: any) => (
+                        <tr key={log._id}>
+                            <td style={{ padding: '12px 20px' }}>
+                                <span className="badge badge-blue" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                                    {log.action.replace(/_/g, ' ')}
+                                </span>
+                            </td>
+                            <td className="text-xs" style={{ padding: '12px 20px', color: 'var(--color-text-secondary)' }}>
+                                {log.entityType} ({log.entityId.slice(-6)})
+                            </td>
+                            <td className="text-xs" style={{ padding: '12px 20px', color: 'var(--color-text-muted)' }}>
+                                {formatDate(log.createdAt)}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
             {data?.pagination && (
-                <div className="px-6 py-3 flex items-center justify-between border-t" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="px-5 py-3 flex items-center justify-between border-t" style={{ borderColor: 'var(--color-border-light)' }}>
                     <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                         Page {data.pagination.page} of {data.pagination.pages}
                     </span>

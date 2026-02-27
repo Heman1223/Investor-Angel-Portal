@@ -4,11 +4,14 @@ import {
     PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis,
     CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { AlertTriangle, TrendingUp, Briefcase, DollarSign, Target, Plus, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import {
+    AlertTriangle, TrendingUp, Briefcase, DollarSign,
+    Target, Plus, ArrowUpRight, Activity, CheckCircle2, Rocket
+} from 'lucide-react';
 import { dashboardAPI, alertsAPI } from '../services/api';
-import { formatCurrencyCompact, formatMOIC, formatPercent, paiseToRupees, getMOICColor, getIRRColor } from '../utils/formatters';
+import { formatCurrencyCompact, formatMOIC, formatPercent, paiseToRupees, getMOICColor } from '../utils/formatters';
 
-const CHART_COLORS = ['#f59e0b', '#3b82f6', '#14b830', '#ef4444', '#8b5cf6', '#ec4899'];
+const SECTOR_COLORS = ['#22c55e', '#3b82f6', '#a855f7', '#f97316', '#ef4444', '#ec4899'];
 
 export default function DashboardPage() {
     const navigate = useNavigate();
@@ -30,18 +33,20 @@ export default function DashboardPage() {
     });
 
     const redAlerts = alerts?.filter((a: any) => a.severity === 'RED' && !a.isRead) || [];
+    const yellowAlerts = alerts?.filter((a: any) => a.severity === 'YELLOW' && !a.isRead) || [];
+    const allUnreadAlerts = [...redAlerts, ...yellowAlerts].slice(0, 3);
 
     if (isLoading) {
         return (
-            <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="card animate-shimmer h-[140px]" />
+            <div className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} className="card animate-shimmer h-[120px]" />
                     ))}
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="card animate-shimmer h-[380px] lg:col-span-2" />
-                    <div className="card animate-shimmer h-[380px]" />
+                    <div className="card animate-shimmer h-[360px] lg:col-span-2" />
+                    <div className="card animate-shimmer h-[360px]" />
                 </div>
             </div>
         );
@@ -50,273 +55,217 @@ export default function DashboardPage() {
     if (!dashboard || dashboard.startupMetrics.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in">
-                <div className="w-24 h-24 rounded-2xl flex items-center justify-center mb-8" style={{ 
-                    background: 'linear-gradient(135deg, rgba(20, 184, 48, 0.12) 0%, rgba(20, 184, 48, 0.06) 100%)',
-                    border: '2px dashed rgba(20, 184, 48, 0.3)',
-                    boxShadow: 'var(--shadow-md)'
+                <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6" style={{
+                    background: 'var(--color-primary-50)',
+                    border: '2px dashed var(--color-primary)',
                 }}>
-                    <Briefcase size={40} style={{ color: '#14b830' }} strokeWidth={2} />
+                    <Briefcase size={36} style={{ color: 'var(--color-primary)' }} />
                 </div>
-                <h2 className="font-display text-3xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
                     Your portfolio is empty
                 </h2>
-                <p className="text-base mb-8" style={{ color: 'var(--color-text-secondary)' }}>
+                <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
                     Add your first investment to get started.
                 </p>
-                <button onClick={() => navigate('/portfolio')} className="btn btn-primary" style={{ padding: '12px 24px', fontSize: '15px' }}>
-                    <Plus size={18} strokeWidth={2.5} /> Add First Investment
+                <button onClick={() => navigate('/portfolio')} className="btn btn-primary">
+                    <Plus size={18} /> Add First Investment
                 </button>
             </div>
         );
     }
 
     const d = dashboard;
+
     const metrics = [
-        { 
-            label: 'Total Invested', 
-            value: formatCurrencyCompact(paiseToRupees(d.totalInvested)), 
-            icon: DollarSign, 
+        {
+            label: 'TOTAL INVESTED',
+            value: formatCurrencyCompact(paiseToRupees(d.totalInvested)),
+            icon: DollarSign,
             color: '#3b82f6',
-            bgColor: 'rgba(59, 130, 246, 0.12)',
+            bgColor: '#dbeafe',
             change: '+12.4%',
-            isPositive: true
+            isPositive: true,
         },
-        { 
-            label: 'Portfolio Value', 
-            value: formatCurrencyCompact(paiseToRupees(d.currentPortfolioValue)), 
-            icon: TrendingUp, 
-            color: '#14b830',
-            bgColor: 'rgba(20, 184, 48, 0.12)',
+        {
+            label: 'CURRENT VALUE',
+            value: formatCurrencyCompact(paiseToRupees(d.currentPortfolioValue)),
+            icon: TrendingUp,
+            color: '#22c55e',
+            bgColor: '#dcfce7',
             change: '+24.8%',
-            isPositive: true
+            isPositive: true,
         },
-        { 
-            label: 'Portfolio MOIC', 
-            value: formatMOIC(d.portfolioMOIC), 
-            icon: Target, 
-            color: d.portfolioMOIC >= 1 ? '#14b830' : '#ef4444',
-            bgColor: d.portfolioMOIC >= 1 ? 'rgba(20, 184, 48, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-            change: '1.81x',
-            isPositive: d.portfolioMOIC >= 1
+        {
+            label: 'IRR',
+            value: formatPercent(d.portfolioXIRR),
+            icon: Activity,
+            color: '#f59e0b',
+            bgColor: '#fef3c7',
+            change: d.portfolioXIRR && d.portfolioXIRR > 0 ? '+2.1%' : '-',
+            isPositive: d.portfolioXIRR && d.portfolioXIRR > 0,
         },
-        { 
-            label: 'Portfolio XIRR', 
-            value: formatPercent(d.portfolioXIRR), 
-            icon: Activity, 
-            color: d.portfolioXIRR && d.portfolioXIRR > 0 ? '#14b830' : '#ef4444',
-            bgColor: d.portfolioXIRR && d.portfolioXIRR > 0 ? 'rgba(20, 184, 48, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-            change: '+28.2%',
-            isPositive: d.portfolioXIRR && d.portfolioXIRR > 0
+        {
+            label: 'MOIC',
+            value: formatMOIC(d.portfolioMOIC),
+            icon: Target,
+            color: '#8b5cf6',
+            bgColor: '#f3e8ff',
+            change: formatMOIC(d.portfolioMOIC),
+            isPositive: d.portfolioMOIC >= 1,
+        },
+        {
+            label: 'ACTIVE STARTUPS',
+            value: String(d.activeCount),
+            icon: Rocket,
+            color: '#22c55e',
+            bgColor: '#dcfce7',
+            change: null,
+            isPositive: true,
+        },
+        {
+            label: 'EXITS',
+            value: String(d.exitedCount),
+            icon: CheckCircle2,
+            color: '#3b82f6',
+            bgColor: '#dbeafe',
+            change: null,
+            isPositive: true,
         },
     ];
 
+    // Sector allocation data for donut
+    const sectorData = d.sectorAllocation.map((s: any) => ({
+        name: s.sector,
+        value: paiseToRupees(s.invested),
+    }));
+
+    const topSector = sectorData.length > 0
+        ? sectorData.reduce((max: any, s: any) => s.value > max.value ? s : max, sectorData[0])
+        : null;
+
+    const totalSectorValue = sectorData.reduce((sum: number, s: any) => sum + s.value, 0);
+    const topSectorPct = topSector && totalSectorValue > 0
+        ? Math.round((topSector.value / totalSectorValue) * 100)
+        : 0;
+
     return (
-        <div className="space-y-8 animate-fade-in">
-            {/* Page Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="font-display text-4xl font-bold tracking-tight mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                        Portfolio Overview
-                    </h1>
-                    <p className="text-base" style={{ color: 'var(--color-text-secondary)' }}>
-                        Real-time insights into your investment portfolio
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <span className="badge badge-green" style={{ padding: '6px 14px', fontSize: '13px', fontWeight: 600 }}>
-                        <span className="badge-dot" style={{ background: '#14b830', width: '7px', height: '7px' }}></span>
-                        LIVE
-                    </span>
-                </div>
-            </div>
-
-            {/* Alert Banner */}
-            {redAlerts.length > 0 && (
-                <div
-                    className="flex items-center gap-4 px-6 py-5 rounded-xl border"
-                    style={{ 
-                        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(239, 68, 68, 0.03) 100%)', 
-                        borderColor: 'rgba(239, 68, 68, 0.25)',
-                        boxShadow: 'var(--shadow-md)'
-                    }}
-                >
-                    <div className="p-3 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.12)' }}>
-                        <AlertTriangle size={20} style={{ color: '#ef4444' }} strokeWidth={2.5} />
-                    </div>
-                    <div className="flex-1">
-                        <span className="text-base font-semibold" style={{ color: '#b91c1c' }}>
-                            {redAlerts.length} critical alert{redAlerts.length > 1 ? 's' : ''} require immediate attention
-                        </span>
-                    </div>
-                    <button
-                        onClick={() => navigate('/alerts')}
-                        className="btn btn-sm"
-                        style={{ 
-                            background: '#ef4444',
-                            color: 'white',
-                            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
-                            padding: '8px 18px',
-                            fontSize: '14px'
-                        }}
-                    >
-                        View Alerts
-                    </button>
-                </div>
-            )}
-
-            {/* Metric Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="space-y-6 animate-fade-in">
+            {/* 6 Metric Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {metrics.map((m, i) => (
-                    <div 
-                        key={i} 
-                        className="card card-hover" 
-                        style={{ 
-                            borderLeft: `4px solid ${m.color}`,
-                            background: 'linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 251, 250, 1) 100%)',
-                            padding: '28px',
-                            boxShadow: 'var(--shadow-md)',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                        }}
-                    >
-                        <div className="flex items-start justify-between mb-5">
-                            <div className="p-3 rounded-xl" style={{ 
-                                background: m.bgColor,
-                                boxShadow: 'var(--shadow-sm)'
-                            }}>
-                                <m.icon size={22} style={{ color: m.color }} strokeWidth={2.5} />
-                            </div>
-                            <div className="flex items-center gap-1.5 text-sm font-bold" style={{ 
-                                color: m.isPositive ? '#15803d' : '#b91c1c'
-                            }}>
-                                {m.isPositive ? <ArrowUpRight size={16} strokeWidth={2.5} /> : <ArrowDownRight size={16} strokeWidth={2.5} />}
-                                {m.change}
-                            </div>
-                        </div>
-                        <div>
-                            <span className="text-xs font-semibold uppercase tracking-wider" style={{ 
+                    <div key={i} className="card card-hover" style={{ padding: '20px' }}>
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-bold uppercase tracking-wider" style={{
                                 color: 'var(--color-text-muted)',
-                                letterSpacing: '0.1em'
+                                letterSpacing: '0.08em',
                             }}>
                                 {m.label}
                             </span>
-                            <div className="font-mono text-3xl font-bold mt-2" style={{ 
-                                color: m.color,
-                                letterSpacing: '-0.02em'
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{
+                                background: m.bgColor,
                             }}>
-                                {m.value}
+                                <m.icon size={14} style={{ color: m.color }} strokeWidth={2.5} />
                             </div>
                         </div>
+                        <div className="font-mono text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
+                            {m.value}
+                        </div>
+                        {m.change && (
+                            <div className="flex items-center gap-1 text-xs font-semibold" style={{
+                                color: m.isPositive ? '#16a34a' : '#dc2626',
+                            }}>
+                                <ArrowUpRight size={12} strokeWidth={2.5} />
+                                {m.change}
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
 
-            {/* Sub Stats */}
-            <div className="flex gap-4 flex-wrap">
-                <div className="badge badge-green" style={{ padding: '8px 16px', fontSize: '14px', fontWeight: 600 }}>
-                    <span className="badge-dot" style={{ background: '#14b830', width: '7px', height: '7px' }}></span>
-                    Active: {d.activeCount}
-                </div>
-                <div className="badge badge-gray" style={{ padding: '8px 16px', fontSize: '14px', fontWeight: 600 }}>
-                    <span className="badge-dot" style={{ background: '#6b7280', width: '7px', height: '7px' }}></span>
-                    Exited: {d.exitedCount}
-                </div>
-                <div className="badge badge-blue" style={{ padding: '8px 16px', fontSize: '14px', fontWeight: 600 }}>
-                    TVPI: {d.portfolioTVPI?.toFixed(2)}x
-                </div>
-            </div>
-
-            {/* Charts Grid */}
+            {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Portfolio Growth Chart */}
-                <div className="card lg:col-span-2" style={{ 
-                    padding: '32px',
-                    boxShadow: 'var(--shadow-lg)'
-                }}>
-                    <div className="flex items-center justify-between mb-8">
+                <div className="card lg:col-span-2" style={{ padding: '28px' }}>
+                    <div className="flex items-center justify-between mb-6">
                         <div>
-                            <h3 className="font-display text-xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                            <h3 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
                                 Portfolio Growth
                             </h3>
-                            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                                Investment vs Current Value comparison
+                            <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                                Net Asset Value over time (YoY)
                             </p>
                         </div>
-                        <select className="select" style={{ 
-                            width: 'auto', 
-                            minWidth: '140px', 
-                            padding: '8px 40px 8px 14px',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            boxShadow: 'var(--shadow-sm)'
+                        <div className="flex items-center gap-1 p-0.5 rounded-lg" style={{
+                            background: 'var(--color-bg-hover)',
+                            border: '1px solid var(--color-border-light)',
                         }}>
-                            <option>All Time</option>
-                            <option>This Year</option>
-                            <option>Last 6M</option>
-                        </select>
+                            {['1Y', '3Y', 'ALL'].map((period) => (
+                                <button
+                                    key={period}
+                                    className="px-3 py-1 rounded-md text-xs font-semibold transition-all"
+                                    style={{
+                                        background: period === 'ALL' ? 'white' : 'transparent',
+                                        color: period === 'ALL' ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                                        boxShadow: period === 'ALL' ? 'var(--shadow-xs)' : 'none',
+                                    }}
+                                >
+                                    {period}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    <div className="h-[300px]">
+                    <div className="h-[280px]">
                         <ResponsiveContainer>
                             <AreaChart
                                 data={d.startupMetrics.map((s: any) => ({
                                     name: s.name,
-                                    invested: paiseToRupees(s.invested),
-                                    currentValue: paiseToRupees(s.currentValue),
+                                    value: paiseToRupees(s.currentValue),
                                 }))}
-                                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                             >
                                 <defs>
-                                    <linearGradient id="colorInvested" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25}/>
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                    </linearGradient>
-                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#14b830" stopOpacity={0.25}/>
-                                        <stop offset="95%" stopColor="#14b830" stopOpacity={0}/>
+                                    <linearGradient id="colorGrowth" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15} />
+                                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#eef1f4" vertical={false} />
-                                <XAxis 
-                                    dataKey="name" 
-                                    tick={{ fill: '#8b949e', fontSize: 12, fontWeight: 500 }} 
-                                    stroke="#eef1f4" 
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                <XAxis
+                                    dataKey="name"
+                                    tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 500 }}
+                                    stroke="#f1f5f9"
                                     axisLine={false}
                                     tickLine={false}
                                 />
-                                <YAxis 
-                                    tick={{ fill: '#8b949e', fontSize: 12, fontWeight: 500 }} 
-                                    stroke="#eef1f4" 
+                                <YAxis
+                                    tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 500 }}
+                                    stroke="#f1f5f9"
                                     tickFormatter={(v) => formatCurrencyCompact(v)}
                                     axisLine={false}
                                     tickLine={false}
                                 />
                                 <Tooltip
                                     contentStyle={{
-                                        background: 'white', 
-                                        border: '1px solid #eef1f4',
-                                        borderRadius: 10, 
-                                        fontFamily: 'Inter', 
+                                        background: 'white',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: 10,
+                                        fontFamily: 'Inter',
                                         fontSize: 13,
                                         fontWeight: 500,
-                                        padding: '12px 16px',
-                                        boxShadow: 'var(--shadow-lg)'
+                                        padding: '10px 14px',
+                                        boxShadow: 'var(--shadow-lg)',
                                     }}
                                     formatter={(value: number | undefined) => formatCurrencyCompact(value ?? 0)}
                                 />
-                                <Area 
-                                    type="monotone" 
-                                    dataKey="invested" 
-                                    stroke="#3b82f6" 
-                                    fill="url(#colorInvested)" 
-                                    strokeWidth={3}
-                                    name="Invested"
-                                />
-                                <Area 
-                                    type="monotone" 
-                                    dataKey="currentValue" 
-                                    stroke="#14b830" 
-                                    fill="url(#colorValue)" 
-                                    strokeWidth={3}
-                                    name="Current Value"
+                                <Area
+                                    type="monotone"
+                                    dataKey="value"
+                                    stroke="#22c55e"
+                                    fill="url(#colorGrowth)"
+                                    strokeWidth={2.5}
+                                    dot={{ fill: '#22c55e', r: 3, stroke: 'white', strokeWidth: 2 }}
+                                    activeDot={{ fill: '#22c55e', r: 5, stroke: 'white', strokeWidth: 2 }}
+                                    name="Portfolio Value"
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -324,178 +273,213 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Sector Allocation Donut */}
-                <div className="card" style={{ 
-                    padding: '32px',
-                    boxShadow: 'var(--shadow-lg)'
-                }}>
-                    <div className="mb-8">
-                        <h3 className="font-display text-xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                            Sector Allocation
-                        </h3>
-                        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                            Distribution by investment
-                        </p>
-                    </div>
-                    <div className="h-[200px] mb-6">
+                <div className="card" style={{ padding: '28px' }}>
+                    <h3 className="text-base font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
+                        Sector Allocation
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
+                        Distribution by investment
+                    </p>
+                    <div className="h-[200px] relative">
                         <ResponsiveContainer>
                             <PieChart>
                                 <Pie
-                                    data={d.sectorAllocation.map((s: any) => ({
-                                        name: s.sector,
-                                        value: paiseToRupees(s.invested),
-                                    }))}
-                                    cx="50%" 
+                                    data={sectorData}
+                                    cx="50%"
                                     cy="50%"
-                                    innerRadius={55} 
-                                    outerRadius={80}
+                                    innerRadius={58}
+                                    outerRadius={82}
                                     dataKey="value"
                                     stroke="white"
                                     strokeWidth={3}
                                 >
-                                    {d.sectorAllocation.map((_: any, i: number) => (
-                                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                    {sectorData.map((_: any, i: number) => (
+                                        <Cell key={i} fill={SECTOR_COLORS[i % SECTOR_COLORS.length]} />
                                     ))}
                                 </Pie>
                                 <Tooltip
                                     contentStyle={{
-                                        background: 'white', 
-                                        border: '1px solid #eef1f4',
-                                        borderRadius: 10, 
-                                        fontFamily: 'Inter', 
+                                        background: 'white',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: 10,
                                         fontSize: 13,
-                                        fontWeight: 500,
-                                        padding: '12px 16px',
-                                        boxShadow: 'var(--shadow-lg)'
+                                        padding: '10px 14px',
+                                        boxShadow: 'var(--shadow-lg)',
                                     }}
                                     formatter={(value: number | undefined) => formatCurrencyCompact(value ?? 0)}
                                 />
                             </PieChart>
                         </ResponsiveContainer>
-                    </div>
-                    <div className="space-y-3">
-                        {d.sectorAllocation.map((s: any, i: number) => (
-                            <div key={s.sector} className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-3.5 h-3.5 rounded" style={{ 
-                                        background: CHART_COLORS[i % CHART_COLORS.length],
-                                        boxShadow: 'var(--shadow-sm)'
-                                    }} />
-                                    <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                                        {s.sector}
-                                    </span>
-                                </div>
-                                <span className="font-mono font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                                    {formatCurrencyCompact(paiseToRupees(s.invested))}
+                        {/* Center Label */}
+                        {topSector && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                                    TOP SECTOR
+                                </span>
+                                <span className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                                    {topSector.name}
+                                </span>
+                                <span className="text-sm font-bold" style={{ color: '#22c55e' }}>
+                                    {topSectorPct}%
                                 </span>
                             </div>
-                        ))}
+                        )}
+                    </div>
+                    {/* Legend */}
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                        {d.sectorAllocation.map((s: any, i: number) => {
+                            const pct = totalSectorValue > 0 ? Math.round((paiseToRupees(s.invested) / totalSectorValue) * 100) : 0;
+                            return (
+                                <div key={s.sector} className="flex items-center gap-2 text-xs">
+                                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{
+                                        background: SECTOR_COLORS[i % SECTOR_COLORS.length],
+                                    }} />
+                                    <span style={{ color: 'var(--color-text-secondary)' }}>
+                                        {s.sector} ({pct}%)
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
 
-            {/* Portfolio Companies Table */}
-            <div className="card" style={{ padding: 0, boxShadow: 'var(--shadow-lg)' }}>
-                <div className="px-8 py-6 border-b" style={{ borderColor: 'var(--color-border-light)' }}>
-                    <h3 className="font-display text-xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                        Portfolio Companies
-                    </h3>
-                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                        {d.startupMetrics.length} companies in your portfolio
-                    </p>
-                </div>
-                <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style={{ padding: '16px 32px' }}>Name</th>
-                                <th style={{ padding: '16px 32px' }}>Sector</th>
-                                <th style={{ padding: '16px 32px' }}>Stage</th>
-                                <th style={{ padding: '16px 32px' }}>Invested</th>
-                                <th style={{ padding: '16px 32px' }}>Current Value</th>
-                                <th style={{ padding: '16px 32px' }}>MOIC</th>
-                                <th style={{ padding: '16px 32px' }}>IRR</th>
-                                <th style={{ padding: '16px 32px' }}>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {d.startupMetrics.map((s: any) => (
-                                <tr 
-                                    key={s.startupId} 
-                                    className="cursor-pointer" 
-                                    onClick={() => navigate(`/portfolio/${s.startupId}`)}
-                                    style={{ transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                                >
-                                    <td className="font-semibold" style={{ 
-                                        color: 'var(--color-text-primary)',
-                                        padding: '18px 32px',
-                                        fontSize: '15px'
-                                    }}>
-                                        {s.name}
-                                    </td>
-                                    <td style={{ 
-                                        color: 'var(--color-text-secondary)',
-                                        padding: '18px 32px',
-                                        fontSize: '14px'
-                                    }}>
-                                        {s.sector}
-                                    </td>
-                                    <td style={{ padding: '18px 32px' }}>
-                                        <span className="badge badge-blue" style={{ 
-                                            fontSize: '12px', 
-                                            padding: '5px 12px',
-                                            fontWeight: 600
+            {/* Risk Alerts & Recent Updates Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Risk Alerts */}
+                <div className="lg:col-span-2 rounded-xl p-5" style={{
+                    background: 'linear-gradient(135deg, #fff5f5 0%, #fef2f2 100%)',
+                    border: '1px solid #fecaca',
+                }}>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg" style={{ background: '#fecaca' }}>
+                            <AlertTriangle size={18} style={{ color: '#ef4444' }} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                                Risk Alerts
+                            </h3>
+                            <p className="text-xs" style={{ color: '#ef4444' }}>
+                                Action required for {redAlerts.length + yellowAlerts.length} items
+                            </p>
+                        </div>
+                    </div>
+
+                    {allUnreadAlerts.length > 0 ? (
+                        <div className="space-y-3">
+                            {allUnreadAlerts.map((alert: any) => (
+                                <div key={alert._id} className="p-3 rounded-lg" style={{
+                                    background: 'rgba(255, 255, 255, 0.8)',
+                                    border: '1px solid #fecaca',
+                                }}>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{
+                                            background: alert.severity === 'RED' ? '#ef4444' : '#f59e0b',
+                                        }}></span>
+                                        <span className="text-sm font-semibold" style={{
+                                            color: alert.severity === 'RED' ? '#b91c1c' : '#b45309',
                                         }}>
-                                            {s.stage}
+                                            {alert.alertType?.replace(/_/g, ' ')} — {alert.startupId?.name || 'Unknown'}
                                         </span>
-                                    </td>
-                                    <td className="font-mono font-medium" style={{ 
-                                        color: 'var(--color-text-secondary)',
-                                        padding: '18px 32px',
-                                        fontSize: '14px'
-                                    }}>
-                                        {formatCurrencyCompact(paiseToRupees(s.invested))}
-                                    </td>
-                                    <td className="font-mono font-bold" style={{ 
-                                        color: 'var(--color-text-primary)',
-                                        padding: '18px 32px',
-                                        fontSize: '14px'
-                                    }}>
-                                        {formatCurrencyCompact(paiseToRupees(s.currentValue))}
-                                    </td>
-                                    <td className={`font-mono font-bold ${getMOICColor(s.moic)}`} style={{ 
-                                        padding: '18px 32px',
-                                        fontSize: '14px'
-                                    }}>
-                                        {formatMOIC(s.moic)}
-                                    </td>
-                                    <td className={`font-mono font-bold ${getIRRColor(s.xirr)}`} style={{ 
-                                        padding: '18px 32px',
-                                        fontSize: '14px'
-                                    }}>
-                                        {formatPercent(s.xirr)}
-                                    </td>
-                                    <td style={{ padding: '18px 32px' }}>
-                                        <span className={`badge ${
-                                            s.status === 'active' ? 'badge-green' :
-                                            s.status === 'exited' ? 'badge-gray' :
-                                            s.status === 'written_off' ? 'badge-red' : 'badge-yellow'
-                                        }`} style={{ 
-                                            fontSize: '12px', 
-                                            padding: '5px 12px',
-                                            fontWeight: 600
-                                        }}>
-                                            <span className="badge-dot" style={{ 
-                                                background: s.status === 'active' ? '#14b830' : '#6b7280',
-                                                width: '6px',
-                                                height: '6px'
-                                            }}></span>
-                                            {s.status === 'written_off' ? 'Written Off' : s.status.charAt(0).toUpperCase() + s.status.slice(1)}
-                                        </span>
-                                    </td>
-                                </tr>
+                                    </div>
+                                    <p className="text-xs ml-4" style={{ color: 'var(--color-text-secondary)' }}>
+                                        {alert.message}
+                                    </p>
+                                </div>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-4">
+                            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No active risk alerts</p>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={() => navigate('/alerts')}
+                        className="mt-4 text-sm font-semibold transition-colors hover:underline"
+                        style={{ color: '#ef4444' }}
+                    >
+                        View all risks →
+                    </button>
+                </div>
+
+                {/* Portfolio Companies Quick View */}
+                <div className="lg:col-span-3 card" style={{ padding: 0 }}>
+                    <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--color-border-light)' }}>
+                        <h3 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                            Portfolio Companies
+                        </h3>
+                        <button
+                            onClick={() => navigate('/portfolio')}
+                            className="text-xs font-semibold transition-colors hover:underline"
+                            style={{ color: 'var(--color-primary)' }}
+                        >
+                            View all →
+                        </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr>
+                                    <th style={{ padding: '10px 20px', fontSize: '10px' }}>Name</th>
+                                    <th style={{ padding: '10px 20px', fontSize: '10px' }}>Invested</th>
+                                    <th style={{ padding: '10px 20px', fontSize: '10px' }}>Value</th>
+                                    <th style={{ padding: '10px 20px', fontSize: '10px' }}>MOIC</th>
+                                    <th style={{ padding: '10px 20px', fontSize: '10px' }}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {d.startupMetrics.slice(0, 5).map((s: any) => (
+                                    <tr
+                                        key={s.startupId}
+                                        className="cursor-pointer"
+                                        onClick={() => navigate(`/portfolio/${s.startupId}`)}
+                                    >
+                                        <td style={{ padding: '10px 20px' }}>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0" style={{
+                                                    background: `hsl(${s.name.charCodeAt(0) * 10}, 65%, 92%)`,
+                                                    color: `hsl(${s.name.charCodeAt(0) * 10}, 65%, 40%)`,
+                                                }}>
+                                                    {s.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                                        {s.name}
+                                                    </p>
+                                                    <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                                                        {s.sector}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="font-mono text-sm" style={{ padding: '10px 20px', color: 'var(--color-text-secondary)' }}>
+                                            {formatCurrencyCompact(paiseToRupees(s.invested))}
+                                        </td>
+                                        <td className="font-mono text-sm font-semibold" style={{ padding: '10px 20px', color: 'var(--color-text-primary)' }}>
+                                            {formatCurrencyCompact(paiseToRupees(s.currentValue))}
+                                        </td>
+                                        <td className={`font-mono text-sm font-semibold ${getMOICColor(s.moic)}`} style={{ padding: '10px 20px' }}>
+                                            {formatMOIC(s.moic)}
+                                        </td>
+                                        <td style={{ padding: '10px 20px' }}>
+                                            <span className={`badge ${s.status === 'active' ? 'badge-green' :
+                                                s.status === 'exited' ? 'badge-gray' :
+                                                    s.status === 'written_off' ? 'badge-red' : 'badge-yellow'
+                                                }`} style={{ fontSize: '11px', padding: '2px 8px' }}>
+                                                <span className="badge-dot" style={{
+                                                    background: s.status === 'active' ? '#22c55e' :
+                                                        s.status === 'exited' ? '#64748b' : '#ef4444',
+                                                    width: '5px', height: '5px',
+                                                }}></span>
+                                                {s.status === 'written_off' ? 'Written Off' : s.status.charAt(0).toUpperCase() + s.status.slice(1)}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

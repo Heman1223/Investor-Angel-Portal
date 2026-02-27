@@ -67,7 +67,7 @@ export default function App() {
             background: 'var(--color-bg-card)',
             color: 'var(--color-text-primary)',
             border: '1px solid var(--color-border)',
-            fontFamily: "'Sora', sans-serif",
+            fontFamily: "'Inter', sans-serif",
             fontSize: '14px',
           },
         }}
