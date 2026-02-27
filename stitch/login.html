@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Investor Portal Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#14b830",
+                "background-light": "#f6f8f6",
+                "background-dark": "#112114",
+              },
+              fontFamily: {
+                "display": ["Inter", "sans-serif"]
+              },
+              borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Header -->
+<header class="flex w-full items-center justify-between border-b border-solid border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm px-6 py-4 lg:px-10">
+<div class="flex items-center gap-3">
+<div class="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-[24px]">account_balance</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Investor Portal</h2>
+</div>
+<div class="flex items-center gap-4 lg:gap-8">
+<div class="hidden md:flex items-center gap-6">
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors text-sm font-medium leading-normal" href="#">Support</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors text-sm font-medium leading-normal" href="#">Contact</a>
+</div>
+<button class="flex h-10 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-5 bg-primary hover:bg-green-600 transition-colors text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Sign Up</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<div class="flex flex-1 flex-col justify-center px-4 py-12 lg:px-8">
+<div class="mx-auto w-full max-w-[480px]">
+<!-- Login Card -->
+<div class="flex flex-col rounded-xl bg-white dark:bg-slate-900 shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden border border-slate-100 dark:border-slate-800">
+<!-- Decorative Top Image -->
+<div class="h-32 bg-cover bg-center relative" data-alt="Abstract financial growth chart with green tones" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBzlwFb9Jm83jeihZoEG4x6fKxF2M6Lx8Um-Aq7FAsCLryIES2eYgiWzy_hZkOk0bq33Wq8M7D_n84mXZjdwdV2tPSf7ie8pnY1-wiQ5Nm9HfIIbersQIWQM3rJFQyAMeuoP4CKPdM9S1FG5jX2eTbqYLTSilpNQFbOKHw1GsCo9BNEuaiVmPBU480LH5kyyp3ElgscAx27ojmnRvuN2M2vb6ChzPvZfCc7V1Vm-RpYarBI70x7PUkWR1p_AZX-hoGHczsMNdB82YSR");'>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-4 left-6">
+<h3 class="text-white text-xl font-bold">Welcome Back</h3>
+<p class="text-white/90 text-sm">Securely access your portfolio</p>
+</div>
+</div>
+<div class="p-8 pt-6">
+<div class="mb-8 text-center">
+<h1 class="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-tight">Private Investment Intelligence</h1>
+<p class="mt-2 text-slate-500 dark:text-slate-400 text-sm">Please sign in to continue to your dashboard</p>
+</div>
+<form action="#" class="space-y-6">
+<div class="space-y-5">
+<label class="block">
+<span class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email Address</span>
+<input class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="investor@example.com" type="email"/>
+</label>
+<label class="block">
+<div class="flex justify-between items-center mb-1.5">
+<span class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</span>
+<a class="text-xs font-medium text-primary hover:text-green-600 transition-colors" href="#">Forgot password?</a>
+</div>
+<div class="relative">
+<input class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 pr-10 text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="Enter your password" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility_off</span>
+</button>
+</div>
+</label>
+</div>
+<button class="w-full rounded-lg bg-primary py-3 px-4 text-white font-bold text-sm shadow-md shadow-primary/20 hover:bg-green-600 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all duration-200" type="button">
+                                Sign In
+                            </button>
+</form>
+<div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+<p class="text-center text-sm text-slate-500 dark:text-slate-400">
+                                New to the platform? 
+                                <a class="font-semibold text-primary hover:text-green-600 hover:underline transition-colors" href="#">Request access</a>
+</p>
+</div>
+</div>
+</div>
+<!-- Footer Links -->
+<div class="mt-8 flex justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
+<a class="hover:text-slate-800 dark:hover:text-slate-200 transition-colors" href="#">Privacy Policy</a>
+<span class="h-4 w-px bg-slate-300 dark:bg-slate-700"></span>
+<a class="hover:text-slate-800 dark:hover:text-slate-200 transition-colors" href="#">Terms of Service</a>
+</div>
+</div>
+</div>
+</div>
+</body></html>

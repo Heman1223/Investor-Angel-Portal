@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Startup Performance Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#14b830",
+                        "primary-content": "#ffffff",
+                        "primary-dark": "#0e8a23",
+                        "primary-light": "#e1fce5",
+                        
+                        "background-light": "#f6f8f6",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2c1e",
+                        "background-dark": "#112114",
+
+                        "text-main": "#111812",
+                        "text-muted": "#638869",
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "sans-serif"],
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "2xl": "2rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Hide scrollbar for clean look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-white antialiased min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 w-full bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md border-b border-[#f0f4f1] dark:border-white/10 px-6 py-4">
+<div class="max-w-7xl mx-auto flex items-center justify-between">
+<div class="flex items-center gap-10">
+<div class="flex items-center gap-3 text-text-main dark:text-white">
+<div class="w-8 h-8 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_6_543)">
+<path d="M42.1739 20.1739L27.8261 5.82609C29.1366 7.13663 28.3989 10.1876 26.2002 13.7654C24.8538 15.9564 22.9595 18.3449 20.6522 20.6522C18.3449 22.9595 15.9564 24.8538 13.7654 26.2002C10.1876 28.3989 7.13663 29.1366 5.82609 27.8261L20.1739 42.1739C21.4845 43.4845 24.5355 42.7467 28.1133 40.548C30.3042 39.2016 32.6927 37.3073 35 35C37.3073 32.6927 39.2016 30.3042 40.548 28.1133C42.7467 24.5355 43.4845 21.4845 42.1739 20.1739Z" fill="currentColor"></path>
+<path clip-rule="evenodd" d="M7.24189 26.4066C7.31369 26.4411 7.64204 26.5637 8.52504 26.3738C9.59462 26.1438 11.0343 25.5311 12.7183 24.4963C14.7583 23.2426 17.0256 21.4503 19.238 19.238C21.4503 17.0256 23.2426 14.7583 24.4963 12.7183C25.5311 11.0343 26.1438 9.59463 26.3738 8.52504C26.5637 7.64204 26.4411 7.31369 26.4066 7.24189C26.345 7.21246 26.143 7.14535 25.6664 7.1918C24.9745 7.25925 23.9954 7.5498 22.7699 8.14278C20.3369 9.32007 17.3369 11.4915 14.4142 14.4142C11.4915 17.3369 9.32007 20.3369 8.14278 22.7699C7.5498 23.9954 7.25925 24.9745 7.1918 25.6664C7.14534 26.143 7.21246 26.345 7.24189 26.4066ZM29.9001 10.7285C29.4519 12.0322 28.7617 13.4172 27.9042 14.8126C26.465 17.1544 24.4686 19.6641 22.0664 22.0664C19.6641 24.4686 17.1544 26.465 14.8126 27.9042C13.4172 28.7617 12.0322 29.4519 10.7285 29.9001L21.5754 40.747C21.6001 40.7606 21.8995 40.931 22.8729 40.7217C23.9424 40.4916 25.3821 39.879 27.0661 38.8441C29.1062 37.5904 31.3734 35.7982 33.5858 33.5858C35.7982 31.3734 37.5904 29.1062 38.8441 27.0661C39.879 25.3821 40.4916 23.9425 40.7216 22.8729C40.931 21.8995 40.7606 21.6001 40.747 21.5754L29.9001 10.7285ZM29.2403 4.41187L43.5881 18.7597C44.9757 20.1473 44.9743 22.1235 44.6322 23.7139C44.2714 25.3919 43.4158 27.2666 42.252 29.1604C40.8128 31.5022 38.8165 34.012 36.4142 36.4142C34.012 38.8165 31.5022 40.8128 29.1604 42.252C27.2666 43.4158 25.3919 44.2714 23.7139 44.6322C22.1235 44.9743 20.1473 44.9757 18.7597 43.5881L4.41187 29.2403C3.29027 28.1187 3.08209 26.5973 3.21067 25.2783C3.34099 23.9415 3.8369 22.4852 4.54214 21.0277C5.96129 18.0948 8.43335 14.7382 11.5858 11.5858C14.7382 8.43335 18.0948 5.9613 21.0277 4.54214C22.4852 3.8369 23.9415 3.34099 25.2783 3.21067C26.5973 3.08209 28.1187 3.29028 29.2403 4.41187Z" fill="currentColor" fill-rule="evenodd"></path>
+</g>
+<defs>
+<clippath id="clip0_6_543"><rect fill="white" height="48" width="48"></rect></clippath>
+</defs>
+</svg>
+</div>
+<h2 class="text-lg font-bold tracking-tight">AngelPortfolio</h2>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-text-muted hover:text-primary dark:text-gray-400 dark:hover:text-primary text-sm font-medium transition-colors" href="#">Dashboard</a>
+<a class="text-text-main dark:text-white text-sm font-medium transition-colors" href="#">Portfolio</a>
+<a class="text-text-muted hover:text-primary dark:text-gray-400 dark:hover:text-primary text-sm font-medium transition-colors" href="#">Deal Flow</a>
+<a class="text-text-muted hover:text-primary dark:text-gray-400 dark:hover:text-primary text-sm font-medium transition-colors" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden sm:block">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted dark:text-gray-400 material-symbols-outlined text-xl">search</span>
+<input class="h-10 w-64 bg-background-light dark:bg-white/5 border-none rounded-lg pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary placeholder-text-muted dark:text-white" placeholder="Search companies..." type="text"/>
+</div>
+<button class="bg-gray-200 dark:bg-gray-700 w-9 h-9 rounded-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+<img alt="User profile picture" class="w-full h-full object-cover" data-alt="User profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEyl_wofvS1lhUtEZX0QhLopnhxy07_ekiiNCESb2c4pwzrg5kxIa5KqlAm-sX6XwI2YrjQ2ZrfVZXjAYl67Wq9-NmqLWpUprEvTPojBGBi4f_clZhjH-kzNyhSQLzrK_-WWCglfgenB4RFyc7ngj8pbwEJMcrY5CMiIuZOSnz5Wr1OnvE3PjLGdVkvK4fUmCNratpUtR9rzPop9URG-RUHgLIOFjTOeh3ldNGZZyRXCmA7aFyHXfc5U7gh9yGoATZYIXtf0ehuMN2"/>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-grow w-full max-w-7xl mx-auto px-6 py-8">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 mb-8 text-sm">
+<a class="text-text-muted hover:text-primary transition-colors" href="#">Portfolio</a>
+<span class="text-text-muted">/</span>
+<a class="text-text-muted hover:text-primary transition-colors" href="#">Fintech</a>
+<span class="text-text-muted">/</span>
+<span class="font-medium text-text-main dark:text-white">Stripe</span>
+</nav>
+<!-- Startup Header -->
+<div class="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10">
+<div class="flex items-start gap-6">
+<div class="w-24 h-24 rounded-2xl bg-white shadow-sm border border-gray-100 dark:border-white/10 dark:bg-white/5 p-4 flex items-center justify-center shrink-0">
+<div class="w-full h-full bg-cover bg-center rounded-lg" data-alt="Stripe logo purple background" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA7W-wJo-An_BmK63ucXXBbZA8vtlY-3ZhkcSFseXbtPmK8UTClW1NAnfhdIGOtBDhfUI7Ny4SyMTFYYaQGwamQ84s9DX5EwPTcYv6Dm9mX_fe5T2L0aByTjzNZjyZJj7FbLB5INum9K0Fb1kqdSzD7CYwwgSwZQBEov3K3tyzpC3k5fCYNNrVEmWrlGfb-phgtatDZZf-kr_9WHGkxJjvFot_RAD3OJnxYENP-9wyv0jFEyOUMSU2EBBW0Wl1KPMf2wmvREsE_c9yW');"></div>
+</div>
+<div>
+<div class="flex items-center gap-3 mb-2">
+<h1 class="text-3xl font-bold text-text-main dark:text-white tracking-tight">Stripe</h1>
+<span class="px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold uppercase tracking-wide">Series H</span>
+</div>
+<p class="text-text-muted dark:text-gray-400 text-base mb-2">Financial infrastructure platform for the internet.</p>
+<div class="flex flex-wrap items-center gap-4 text-sm text-text-muted dark:text-gray-500">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-lg">location_on</span> San Francisco, CA</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-lg">domain</span> Fintech</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-lg">calendar_today</span> Invested Oct 2018</span>
+</div>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-5 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-text-main dark:text-white font-medium text-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">share</span>
+                    Share
+                </button>
+<button class="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-medium text-sm transition-all shadow-sm shadow-primary/30 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">edit</span>
+                    Manage Investment
+                </button>
+</div>
+</div>
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+<!-- Total Invested -->
+<div class="p-6 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-gray-300 dark:text-gray-600">payments</span>
+</div>
+<p class="text-sm font-medium text-text-muted dark:text-gray-400 mb-2">Total Invested</p>
+<p class="text-3xl font-bold text-text-main dark:text-white tracking-tight mb-1">$250,000</p>
+<p class="text-xs text-text-muted dark:text-gray-500">Initial + Follow-on</p>
+</div>
+<!-- Current Value -->
+<div class="p-6 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-gray-300 dark:text-gray-600">trending_up</span>
+</div>
+<p class="text-sm font-medium text-text-muted dark:text-gray-400 mb-2">Current Value</p>
+<div class="flex items-baseline gap-2">
+<p class="text-3xl font-bold text-text-main dark:text-white tracking-tight mb-1">$2,450,000</p>
+</div>
+<p class="text-sm font-semibold text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">arrow_upward</span> 15% this year
+                </p>
+</div>
+<!-- MOIC -->
+<div class="p-6 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-gray-300 dark:text-gray-600">percent</span>
+</div>
+<p class="text-sm font-medium text-text-muted dark:text-gray-400 mb-2">Multiple (MOIC)</p>
+<div class="flex items-baseline gap-2">
+<p class="text-3xl font-bold text-text-main dark:text-white tracking-tight mb-1">9.8x</p>
+</div>
+<p class="text-sm font-semibold text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">arrow_upward</span> +1.2x vs last round
+                </p>
+</div>
+<!-- IRR -->
+<div class="p-6 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-gray-300 dark:text-gray-600">monitoring</span>
+</div>
+<p class="text-sm font-medium text-text-muted dark:text-gray-400 mb-2">Net IRR</p>
+<div class="flex items-baseline gap-2">
+<p class="text-3xl font-bold text-text-main dark:text-white tracking-tight mb-1">34.2%</p>
+</div>
+<p class="text-sm font-semibold text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">arrow_upward</span> Top decile
+                </p>
+</div>
+</div>
+<!-- Tabs -->
+<div class="border-b border-gray-200 dark:border-white/10 mb-8">
+<nav aria-label="Tabs" class="flex gap-8 -mb-px overflow-x-auto no-scrollbar">
+<a class="border-b-2 border-text-main dark:border-primary py-4 px-1 text-sm font-semibold text-text-main dark:text-primary whitespace-nowrap" href="#">
+                    Overview
+                </a>
+<a class="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-text-muted dark:text-gray-400 hover:text-text-main dark:hover:text-white hover:border-gray-300 transition-all whitespace-nowrap" href="#">
+                    Cashflows
+                </a>
+<a class="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-text-muted dark:text-gray-400 hover:text-text-main dark:hover:text-white hover:border-gray-300 transition-all whitespace-nowrap" href="#">
+                    Monthly Updates
+                </a>
+<a class="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-text-muted dark:text-gray-400 hover:text-text-main dark:hover:text-white hover:border-gray-300 transition-all whitespace-nowrap" href="#">
+                    Documents
+                </a>
+</nav>
+</div>
+<!-- Content Area -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Performance Chart -->
+<div class="lg:col-span-2 flex flex-col gap-8">
+<section class="bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 p-6 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-lg font-bold text-text-main dark:text-white">Performance History</h3>
+<select class="bg-transparent text-sm border-none text-text-muted dark:text-gray-400 focus:ring-0 cursor-pointer hover:text-primary">
+<option>Last 12 Months</option>
+<option>All Time</option>
+<option>YTD</option>
+</select>
+</div>
+<!-- Chart Placeholder -->
+<div class="w-full h-80 rounded-lg bg-gradient-to-b from-primary/5 to-transparent relative overflow-hidden flex items-end justify-between px-2 pt-10" data-alt="Line chart showing positive growth trend">
+<!-- Simulated Chart Lines using simple divs for effect -->
+<div class="absolute top-0 left-0 w-full h-full p-6">
+<!-- Grid Lines -->
+<div class="w-full h-full border-l border-b border-gray-200 dark:border-white/5 relative">
+<div class="absolute left-0 bottom-[20%] w-full h-px bg-gray-100 dark:bg-white/5 border-dashed border-gray-200"></div>
+<div class="absolute left-0 bottom-[40%] w-full h-px bg-gray-100 dark:bg-white/5 border-dashed border-gray-200"></div>
+<div class="absolute left-0 bottom-[60%] w-full h-px bg-gray-100 dark:bg-white/5 border-dashed border-gray-200"></div>
+<div class="absolute left-0 bottom-[80%] w-full h-px bg-gray-100 dark:bg-white/5 border-dashed border-gray-200"></div>
+<!-- The Line (SVG) -->
+<svg class="absolute bottom-0 left-0 w-full h-full" preserveaspectratio="none">
+<path d="M0 250 Q 80 240, 160 200 T 320 150 T 480 100 T 640 40 T 800 10" fill="none" stroke="#14b830" stroke-linecap="round" stroke-width="3"></path>
+<defs>
+<lineargradient id="gradientArea" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#14b830" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#14b830" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0 250 Q 80 240, 160 200 T 320 150 T 480 100 T 640 40 T 800 10 V 300 H 0 Z" fill="url(#gradientArea)" stroke="none"></path>
+</svg>
+</div>
+</div>
+</div>
+</section>
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold text-text-main dark:text-white">Recent Transactions</h3>
+<a class="text-sm text-primary font-medium hover:text-primary-dark" href="#">View All</a>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
+<table class="w-full text-left text-sm">
+<thead class="bg-gray-50 dark:bg-white/5 text-text-muted dark:text-gray-400 font-medium">
+<tr>
+<th class="px-6 py-4">Date</th>
+<th class="px-6 py-4">Type</th>
+<th class="px-6 py-4">Round</th>
+<th class="px-6 py-4 text-right">Amount</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100 dark:divide-white/5">
+<tr class="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-text-main dark:text-white">Oct 24, 2023</td>
+<td class="px-6 py-4 text-text-muted dark:text-gray-400">Follow-on</td>
+<td class="px-6 py-4"><span class="bg-gray-100 dark:bg-white/10 text-xs px-2 py-1 rounded text-text-main dark:text-gray-300">Series H</span></td>
+<td class="px-6 py-4 text-right font-medium text-text-main dark:text-white">$50,000</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-text-main dark:text-white">Mar 15, 2021</td>
+<td class="px-6 py-4 text-text-muted dark:text-gray-400">Follow-on</td>
+<td class="px-6 py-4"><span class="bg-gray-100 dark:bg-white/10 text-xs px-2 py-1 rounded text-text-main dark:text-gray-300">Series G</span></td>
+<td class="px-6 py-4 text-right font-medium text-text-main dark:text-white">$100,000</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-text-main dark:text-white">Oct 01, 2018</td>
+<td class="px-6 py-4 text-text-muted dark:text-gray-400">Initial</td>
+<td class="px-6 py-4"><span class="bg-gray-100 dark:bg-white/10 text-xs px-2 py-1 rounded text-text-main dark:text-gray-300">Series E</span></td>
+<td class="px-6 py-4 text-right font-medium text-text-main dark:text-white">$100,000</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Right Column: Updates & Documents -->
+<div class="flex flex-col gap-8">
+<!-- Company Highlights / Timeline -->
+<section class="bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 p-6 shadow-sm">
+<h3 class="text-lg font-bold text-text-main dark:text-white mb-6">Latest Updates</h3>
+<div class="relative pl-4 border-l-2 border-gray-100 dark:border-white/10 space-y-8">
+<!-- Timeline Item -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-primary ring-4 ring-white dark:ring-surface-dark"></div>
+<span class="text-xs font-semibold text-primary uppercase tracking-wider mb-1 block">Oct 2023</span>
+<h4 class="text-sm font-bold text-text-main dark:text-white mb-1">Q3 Investor Update</h4>
+<p class="text-sm text-text-muted dark:text-gray-400 line-clamp-2">Revenue grew 35% YoY. Launched new payment rails in SE Asia. Burn rate reduced by 15%.</p>
+<a class="inline-flex items-center gap-1 mt-2 text-xs font-medium text-text-main dark:text-white hover:text-primary transition-colors" href="#">Read more <span class="material-symbols-outlined text-[14px]">arrow_forward</span></a>
+</div>
+<!-- Timeline Item -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-gray-300 dark:bg-gray-600 ring-4 ring-white dark:ring-surface-dark"></div>
+<span class="text-xs font-semibold text-text-muted dark:text-gray-500 uppercase tracking-wider mb-1 block">Jul 2023</span>
+<h4 class="text-sm font-bold text-text-main dark:text-white mb-1">Strategic Partnership</h4>
+<p class="text-sm text-text-muted dark:text-gray-400 line-clamp-2">Announced partnership with Amazon for new checkout experience.</p>
+</div>
+<!-- Timeline Item -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-gray-300 dark:bg-gray-600 ring-4 ring-white dark:ring-surface-dark"></div>
+<span class="text-xs font-semibold text-text-muted dark:text-gray-500 uppercase tracking-wider mb-1 block">Apr 2023</span>
+<h4 class="text-sm font-bold text-text-main dark:text-white mb-1">Product Launch</h4>
+<p class="text-sm text-text-muted dark:text-gray-400 line-clamp-2">Released Stripe Tax for automated compliance globally.</p>
+</div>
+</div>
+</section>
+<!-- Documents -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold text-text-main dark:text-white">Key Documents</h3>
+</div>
+<div class="grid grid-cols-1 gap-3">
+<div class="group flex items-center p-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-white/10 hover:border-primary/50 transition-all cursor-pointer shadow-sm hover:shadow-md">
+<div class="w-10 h-10 rounded bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center mr-3 shrink-0">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-grow min-w-0">
+<h5 class="text-sm font-medium text-text-main dark:text-white truncate group-hover:text-primary">Q3 2023 Financials.pdf</h5>
+<p class="text-xs text-text-muted dark:text-gray-400">Added Oct 24, 2023 • 2.4 MB</p>
+</div>
+<span class="material-symbols-outlined text-gray-400 group-hover:text-primary">download</span>
+</div>
+<div class="group flex items-center p-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-white/10 hover:border-primary/50 transition-all cursor-pointer shadow-sm hover:shadow-md">
+<div class="w-10 h-10 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center mr-3 shrink-0">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-grow min-w-0">
+<h5 class="text-sm font-medium text-text-main dark:text-white truncate group-hover:text-primary">Shareholder Agreement.docx</h5>
+<p class="text-xs text-text-muted dark:text-gray-400">Added Oct 01, 2018 • 850 KB</p>
+</div>
+<span class="material-symbols-outlined text-gray-400 group-hover:text-primary">download</span>
+</div>
+<div class="group flex items-center p-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-white/10 hover:border-primary/50 transition-all cursor-pointer shadow-sm hover:shadow-md">
+<div class="w-10 h-10 rounded bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center mr-3 shrink-0">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-grow min-w-0">
+<h5 class="text-sm font-medium text-text-main dark:text-white truncate group-hover:text-primary">2022 Annual Report.pdf</h5>
+<p class="text-xs text-text-muted dark:text-gray-400">Added Jan 15, 2023 • 5.1 MB</p>
+</div>
+<span class="material-symbols-outlined text-gray-400 group-hover:text-primary">download</span>
+</div>
+</div>
+</section>
+<!-- Contacts -->
+<section class="bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/10 p-6 shadow-sm">
+<h3 class="text-lg font-bold text-text-main dark:text-white mb-4">Contacts</h3>
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+<img alt="Patrick Collison" class="w-full h-full object-cover" data-alt="Patrick Collison headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgCXsPvTe_pCL-3Wu4LOq66vCSVoQyqVyFxA1AWH2Pth0SqOCvAhp3PRXamYz_x1CBp1n87-dbzvV-J4XdCWLxbtUnuQ60zVxy6_Ttg49hlh8jj9pwtog-tMR71ujCYIf10VUihX3H8TIHeTBBSLK2Pb7ImIbj_GADPDmCnOxFxGl1lwRLNJApmCrfMyMTY61t20Sq-xTg_gxGuO3LTKhgr_SGwP3cxpn254lAtNjiv0qfAPSDF4_XQn0mxW25Lcj9jdCvRzG7tqjS"/>
+</div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white">Patrick Collison</p>
+<p class="text-xs text-text-muted dark:text-gray-400">CEO &amp; Co-Founder</p>
+</div>
+<button class="ml-auto text-text-muted hover:text-primary">
+<span class="material-symbols-outlined text-xl">mail</span>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+<img alt="Sarah Smith" class="w-full h-full object-cover" data-alt="Sarah Smith headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPD56voaPIWB9mBjP58FBuRXHV-MgxVBLzb-K3NXlo7aM5TVI8_zxPNO8_Kl_0ZLscYBKl4UlF5-Q-qjPQZYwFJJBnIkvWIotLPRSq0MHRC6woke67fd-RzryWkI8yiq4Ls8a0h0cyU3S-VdmaqXMcwl6W7TRXSMALiD0D_uAWaVAUiVTheRQ1rLW0Fe5TT0GuWHLu4lbnh3X92SLNNGxnxk4ahRx-rVj3UFsSrFLLt8kdJWyeeMI1MKEeHB2YecblrnhbRIIa6Hoy"/>
+</div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white">Sarah Smith</p>
+<p class="text-xs text-text-muted dark:text-gray-400">Head of Investor Relations</p>
+</div>
+<button class="ml-auto text-text-muted hover:text-primary">
+<span class="material-symbols-outlined text-xl">mail</span>
+</button>
+</div>
+</section>
+</div>
+</div>
+</main>
+</body></html>
