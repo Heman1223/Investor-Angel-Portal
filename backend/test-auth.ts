@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-dotenv.config({ path: 'c:/Users/ACER/private-angel-portal/backend/.env' });
+dotenv.config();
 import mongoose from 'mongoose';
 import * as authService from './src/services/auth.service';
 

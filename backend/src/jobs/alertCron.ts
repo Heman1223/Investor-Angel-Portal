@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { Investor } from '../models/Investor';
+import { prisma } from '../db';
 import { checkOverdueUpdates } from '../services/alerts.service';
 import { logger } from '../utils/logger';
 
@@ -8,9 +8,9 @@ export function startCronJobs(): void {
     cron.schedule('0 8 * * *', async () => {
         logger.info('Running daily alert check for overdue updates...');
         try {
-            const investors = await Investor.find({}).select('_id');
+            const investors = await prisma.investor.findMany({ select: { id: true } });
             for (const investor of investors) {
-                await checkOverdueUpdates(investor._id.toString());
+                await checkOverdueUpdates(investor.id);
             }
             logger.info('Daily alert check completed');
         } catch (error) {

@@ -89,8 +89,23 @@ export default function StartupDetailPage() {
 
     if (isLoading) {
         return (
-            <div className="space-y-4">
-                {[1, 2, 3].map(i => <div key={i} className="card animate-shimmer h-24" />)}
+            <div className="space-y-6 animate-[pulse_1.5s_ease-in-out_infinite]">
+                <div className="flex justify-between items-end">
+                    <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(197,164,84,0.05)]"></div>
+                        <div className="space-y-3">
+                            <div className="w-48 h-8 rounded bg-[rgba(255,255,255,0.03)]"></div>
+                            <div className="w-32 h-4 rounded bg-[rgba(255,255,255,0.03)]"></div>
+                        </div>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-[90px] rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(197,164,84,0.04)]"></div>)}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 h-[340px] rounded-xl bg-[rgba(255,255,255,0.02)] border border-[rgba(197,164,84,0.04)]"></div>
+                    <div className="h-[340px] rounded-xl bg-[rgba(255,255,255,0.02)] border border-[rgba(197,164,84,0.04)]"></div>
+                </div>
             </div>
         );
     }
@@ -125,21 +140,21 @@ export default function StartupDetailPage() {
             value: formatCurrencyCompact(paiseToRupees(m.currentValue)),
             sub: m.currentValue > m.invested ? `↑ ${formatPercent((m.currentValue - m.invested) / m.invested)} this year` : '—',
             icon: '📈',
-            subColor: m.currentValue > m.invested ? '#16a34a' : '#dc2626',
+            subColor: m.currentValue > m.invested ? 'var(--color-green)' : 'var(--color-red)',
         },
         {
             label: 'Multiple (MOIC)',
             value: formatMOIC(m.moic),
             sub: m.moic >= 1 ? `↑ +${(m.moic - 1).toFixed(1)}x vs last round` : `↓ ${(m.moic - 1).toFixed(1)}x vs invested`,
             icon: '🎯',
-            subColor: m.moic >= 1 ? '#16a34a' : '#dc2626',
+            subColor: m.moic >= 1 ? 'var(--color-green)' : 'var(--color-red)',
         },
         {
             label: 'Net IRR',
             value: formatPercent(m.xirr),
             sub: m.xirr && m.xirr > 0 ? '↑ Top decile' : '—',
             icon: '📊',
-            subColor: m.xirr && m.xirr > 0 ? '#16a34a' : '#dc2626',
+            subColor: m.xirr && m.xirr > 0 ? 'var(--color-green)' : 'var(--color-red)',
         },
     ];
 
@@ -147,7 +162,7 @@ export default function StartupDetailPage() {
         <div className="space-y-6 animate-fade-in">
             {/* Breadcrumb */}
             <nav className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                <Link to="/portfolio" className="hover:text-green-600 transition-colors">Portfolio</Link>
+                <Link to="/portfolio" className="transition-colors" style={{ color: 'var(--color-text-muted)' }}>Portfolio</Link>
                 <ChevronRight size={14} />
                 <span style={{ color: 'var(--color-text-muted)' }}>{s.sector}</span>
                 <ChevronRight size={14} />
@@ -158,14 +173,14 @@ export default function StartupDetailPage() {
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold flex-shrink-0" style={{
-                        background: `hsl(${s.name.charCodeAt(0) * 10}, 65%, 92%)`,
-                        color: `hsl(${s.name.charCodeAt(0) * 10}, 65%, 40%)`,
+                        background: `hsl(${s.name.charCodeAt(0) * 10}, 65%, 20%)`,
+                        color: `hsl(${s.name.charCodeAt(0) * 10}, 65%, 75%)`,
                     }}>
                         {s.name.charAt(0)}
                     </div>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{s.name}</h1>
+                            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>{s.name}</h1>
                             <span className="badge badge-green" style={{ fontSize: '11px', padding: '2px 10px', fontWeight: 700 }}>
                                 {s.stage.toUpperCase()}
                             </span>
@@ -318,18 +333,18 @@ function OverviewTab({ startup, updates, documents }: any) {
                             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="perfGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15} />
-                                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#C5A454" stopOpacity={0.15} />
+                                        <stop offset="95%" stopColor="#C5A454" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => formatCurrencyCompact(v)} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(197,164,84,0.08)" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: 'var(--color-text-secondary)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: 'var(--color-text-secondary)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => formatCurrencyCompact(v)} />
                                 <Tooltip
-                                    contentStyle={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, padding: '8px 12px', boxShadow: 'var(--shadow-lg)' }}
+                                    contentStyle={{ background: 'var(--color-navy-2, #0C1624)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 13, padding: '8px 12px', boxShadow: 'var(--shadow-lg)', color: 'var(--color-text-primary)' }}
                                     formatter={(v: number | undefined) => formatCurrencyCompact(v ?? 0)}
                                 />
-                                <Area type="monotone" dataKey="value" stroke="#22c55e" fill="url(#perfGradient)" strokeWidth={2.5} dot={{ fill: '#22c55e', r: 3, stroke: 'white', strokeWidth: 2 }} />
+                                <Area type="monotone" dataKey="value" stroke="#C5A454" fill="url(#perfGradient)" strokeWidth={2.5} dot={{ fill: '#C5A454', r: 3, stroke: '#0B1221', strokeWidth: 2 }} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
@@ -386,20 +401,21 @@ function OverviewTab({ startup, updates, documents }: any) {
                     {updates && updates.length > 0 ? (
                         <div className="space-y-4">
                             {updates.slice(0, 3).map((u: any, idx: number) => (
-                                <div key={u._id} className="relative pl-5">
+                                <div key={u._id} className="relative pl-5 group cursor-default">
                                     {/* Timeline dot */}
-                                    <div className="absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full" style={{
-                                        background: idx === 0 ? '#22c55e' : 'var(--color-border)',
+                                    <div className="absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full transition-all duration-300 group-hover:scale-125 group-hover:bg-[#C5A454] shadow-[0_0_10px_transparent] group-hover:shadow-[0_0_12px_rgba(197,164,84,0.6)]" style={{
+                                        background: idx === 0 ? '#C5A454' : 'var(--color-border)',
+                                        boxShadow: idx === 0 ? '0 0 10px rgba(197,164,84,0.3)' : undefined
                                     }}></div>
                                     {idx < 2 && (
-                                        <div className="absolute left-[4px] top-4 w-px h-full" style={{ background: 'var(--color-border-light)' }}></div>
+                                        <div className="absolute left-[4px] top-4 w-px h-[calc(100%+12px)] transition-colors duration-300 group-hover:bg-[#C5A454]" style={{ background: 'var(--color-border-light)' }}></div>
                                     )}
-                                    <p className="text-xs font-bold uppercase" style={{
-                                        color: idx === 0 ? '#22c55e' : 'var(--color-text-muted)',
+                                    <p className="text-xs font-bold uppercase transition-colors duration-300 group-hover:text-[#D4B96A]" style={{
+                                        color: idx === 0 ? '#C5A454' : 'var(--color-text-muted)',
                                     }}>
                                         {formatMonth(u.month)}
                                     </p>
-                                    <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
+                                    <p className="text-sm font-semibold mt-0.5 transition-colors duration-300 group-hover:text-white" style={{ color: 'var(--color-text-primary)' }}>
                                         Revenue: {formatCurrencyCompact(paiseToRupees(u.revenue))}
                                     </p>
                                     <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
@@ -428,12 +444,12 @@ function OverviewTab({ startup, updates, documents }: any) {
                     {documents && documents.length > 0 ? (
                         <div className="space-y-3">
                             {documents.slice(0, 3).map((doc: any) => (
-                                <div key={doc._id} className="flex items-center gap-3 p-3 rounded-lg border transition-colors hover:bg-gray-50" style={{ borderColor: 'var(--color-border-light)' }}>
+                                <div key={doc._id} className="flex items-center gap-3 p-3 rounded-lg border transition-colors" style={{ borderColor: 'var(--color-border-light)' }}>
                                     <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{
-                                        background: doc.fileName.endsWith('.pdf') ? '#fee2e2' : '#dbeafe',
+                                        background: doc.fileName.endsWith('.pdf') ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
                                     }}>
                                         <span className="text-xs font-bold" style={{
-                                            color: doc.fileName.endsWith('.pdf') ? '#ef4444' : '#3b82f6',
+                                            color: doc.fileName.endsWith('.pdf') ? 'var(--color-red)' : 'var(--color-blue, #60a5fa)',
                                         }}>
                                             {doc.fileName.split('.').pop()?.toUpperCase() || 'DOC'}
                                         </span>
@@ -446,7 +462,7 @@ function OverviewTab({ startup, updates, documents }: any) {
                                             Added {formatDate(doc.uploadedAt)} · {(doc.fileSizeBytes / 1024).toFixed(0)} KB
                                         </p>
                                     </div>
-                                    <button className="p-1.5 rounded-lg hover:bg-gray-100" style={{ color: 'var(--color-text-muted)' }}>
+                                    <button className="p-1.5 rounded-lg" style={{ color: 'var(--color-text-muted)' }}>
                                         <Download size={14} />
                                     </button>
                                 </div>
@@ -467,8 +483,8 @@ function OverviewTab({ startup, updates, documents }: any) {
                     {s.founderName ? (
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{
-                                background: `hsl(${s.founderName.charCodeAt(0) * 12}, 60%, 90%)`,
-                                color: `hsl(${s.founderName.charCodeAt(0) * 12}, 60%, 40%)`,
+                                background: `hsl(${s.founderName.charCodeAt(0) * 12}, 60%, 20%)`,
+                                color: `hsl(${s.founderName.charCodeAt(0) * 12}, 60%, 75%)`,
                             }}>
                                 {s.founderName.charAt(0)}
                             </div>
@@ -480,7 +496,7 @@ function OverviewTab({ startup, updates, documents }: any) {
                                     CEO & Founder
                                 </p>
                             </div>
-                            <button className="p-1.5 rounded-lg hover:bg-gray-100" style={{ color: 'var(--color-primary)' }}>
+                            <button className="p-1.5 rounded-lg" style={{ color: 'var(--color-primary)' }}>
                                 <Mail size={16} />
                             </button>
                         </div>
@@ -594,10 +610,10 @@ function DocumentsTab({ documents }: { documents: any[] }) {
             {documents.map((doc: any) => (
                 <div key={doc._id} className="card card-hover flex items-center gap-3" style={{ padding: '16px' }}>
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{
-                        background: doc.fileName.endsWith('.pdf') ? '#fee2e2' : '#dbeafe',
+                        background: doc.fileName.endsWith('.pdf') ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
                     }}>
                         <span className="text-xs font-bold" style={{
-                            color: doc.fileName.endsWith('.pdf') ? '#ef4444' : '#3b82f6',
+                            color: doc.fileName.endsWith('.pdf') ? 'var(--color-red)' : 'var(--color-blue, #60a5fa)',
                         }}>
                             {doc.fileName.split('.').pop()?.toUpperCase() || 'DOC'}
                         </span>
@@ -608,7 +624,7 @@ function DocumentsTab({ documents }: { documents: any[] }) {
                             {formatDate(doc.uploadedAt)} · {(doc.fileSizeBytes / 1024).toFixed(0)} KB
                         </p>
                     </div>
-                    <button className="p-2 rounded-lg hover:bg-gray-100" style={{ color: 'var(--color-text-muted)' }}>
+                    <button className="p-2 rounded-lg" style={{ color: 'var(--color-text-muted)' }}>
                         <Download size={16} />
                     </button>
                 </div>
@@ -631,7 +647,7 @@ function MonthlyUpdateModal({ onClose, onSubmit, isLoading }: any) {
             <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>Add Monthly Update</h2>
-                    <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
+                    <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
                 </div>
                 <form onSubmit={e => { e.preventDefault(); onSubmit({ ...form, revenue: parseFloat(form.revenue), burnRate: parseFloat(form.burnRate), cashBalance: parseFloat(form.cashBalance) }); }} className="space-y-4">
                     <div>
@@ -682,9 +698,9 @@ function ExitModal({ onClose, onSubmit, isLoading }: any) {
             <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-lg font-bold" style={{ color: 'var(--color-red)' }}>Record Exit</h2>
-                    <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
+                    <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
                 </div>
-                <div className="p-3 rounded-lg mb-4" style={{ background: '#fef2f2', border: '1px solid #fecaca' }}>
+                <div className="p-3 rounded-lg mb-4" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                     <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-red)' }}>
                         <AlertTriangle size={16} /> This will permanently close this investment. This cannot be undone.
                     </div>
@@ -728,7 +744,7 @@ function FollowOnModal({ onClose, onSubmit, isLoading }: any) {
             <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>Add Follow-On</h2>
-                    <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
+                    <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
                 </div>
                 <form onSubmit={e => { e.preventDefault(); onSubmit({ ...form, amount: parseFloat(form.amount), equityAcquired: parseFloat(form.equityAcquired), valuationAtTime: parseFloat(form.valuationAtTime) }); }} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">

@@ -1,6 +1,4 @@
-import { Startup } from '../models/Startup';
-import { Cashflow } from '../models/Cashflow';
-import { DilutionEvent } from '../models/DilutionEvent';
+import { prisma } from '../db';
 import { createAppError } from '../middleware/errorHandler';
 import { writeAuditLog } from '../middleware/auditLog';
 import { invalidateAnalyticsCache } from './analytics.service';
@@ -26,43 +24,47 @@ export async function createStartup(
     const entryValuationPaise = Math.round(data.entryValuation * 100);
     const investedAmountPaise = Math.round(data.investedAmount * 100);
 
-    const startup = await Startup.create({
-        investorId,
-        name: data.name,
-        sector: data.sector,
-        stage: data.stage,
-        status: 'active',
-        entryValuation: entryValuationPaise,
-        currentValuation: entryValuationPaise,
-        equityPercent: data.equityPercent,
-        currentEquityPercent: data.equityPercent,
-        investmentDate: new Date(data.investmentDate),
-        description: data.description,
-        website: data.website,
-        founderName: data.founderName,
-        founderEmail: data.founderEmail,
+    const startup = await prisma.startup.create({
+        data: {
+            investorId,
+            name: data.name,
+            sector: data.sector,
+            stage: data.stage,
+            status: 'active',
+            entryValuation: entryValuationPaise,
+            currentValuation: entryValuationPaise,
+            equityPercent: data.equityPercent,
+            currentEquityPercent: data.equityPercent,
+            investmentDate: new Date(data.investmentDate),
+            description: data.description,
+            website: data.website,
+            founderName: data.founderName,
+            founderEmail: data.founderEmail,
+        }
     });
 
     // Create initial investment cashflow (negative = outflow)
-    await Cashflow.create({
-        investorId,
-        startupId: startup._id,
-        amount: -investedAmountPaise,
-        date: new Date(data.investmentDate),
-        type: 'investment',
-        roundName: 'Initial Investment',
-        valuationAtTime: entryValuationPaise,
-        equityAcquired: data.equityPercent,
-        currency: 'INR',
-        notes: `Initial investment in ${data.name}`,
-        createdBy: investorId,
+    await prisma.cashflow.create({
+        data: {
+            investorId,
+            startupId: startup.id,
+            amount: -investedAmountPaise,
+            date: new Date(data.investmentDate),
+            type: 'investment',
+            roundName: 'Initial Investment',
+            valuationAtTime: entryValuationPaise,
+            equityAcquired: data.equityPercent,
+            currency: 'INR',
+            notes: `Initial investment in ${data.name}`,
+            createdBy: investorId,
+        }
     });
 
     await writeAuditLog({
         investorId,
         action: 'CREATE_INVESTMENT',
         entityType: 'startup',
-        entityId: startup._id.toString(),
+        entityId: startup.id,
         newValue: { name: data.name, invested: data.investedAmount, equity: data.equityPercent },
     });
 
@@ -75,12 +77,19 @@ export async function getAllStartups(investorId: string, status?: string) {
     const filter: any = { investorId };
     if (status) filter.status = status;
 
-    const startups = await Startup.find(filter).sort({ investmentDate: -1 });
-    const cashflows = await Cashflow.find({ investorId }).sort({ date: 1 });
+    const startups = await prisma.startup.findMany({
+        where: filter,
+        orderBy: { investmentDate: 'desc' }
+    });
+
+    const cashflows = await prisma.cashflow.findMany({
+        where: { investorId },
+        orderBy: { date: 'asc' }
+    });
 
     return startups.map(startup => {
         const startupCashflows = cashflows.filter(
-            cf => cf.startupId.toString() === startup._id.toString()
+            cf => cf.startupId === startup.id
         );
 
         const invested = startupCashflows
@@ -106,7 +115,7 @@ export async function getAllStartups(investorId: string, status?: string) {
         }
 
         return {
-            ...startup.toObject(),
+            ...startup,
             metrics: {
                 invested,
                 currentValue,
@@ -122,13 +131,23 @@ export async function getAllStartups(investorId: string, status?: string) {
 }
 
 export async function getStartupById(investorId: string, startupId: string) {
-    const startup = await Startup.findOne({ _id: startupId, investorId });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
+
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
 
-    const cashflows = await Cashflow.find({ startupId }).sort({ date: 1 });
-    const dilutionEvents = await DilutionEvent.find({ startupId }).sort({ date: 1 });
+    const cashflows = await prisma.cashflow.findMany({
+        where: { startupId },
+        orderBy: { date: 'asc' }
+    });
+
+    const dilutionEvents = await prisma.dilutionEvent.findMany({
+        where: { startupId },
+        orderBy: { date: 'asc' }
+    });
 
     const invested = cashflows
         .filter(cf => cf.amount < 0)
@@ -153,7 +172,7 @@ export async function getStartupById(investorId: string, startupId: string) {
     }
 
     return {
-        ...startup.toObject(),
+        ...startup,
         metrics: {
             invested,
             currentValue,
@@ -175,14 +194,18 @@ export async function updateStartup(
     data: { name?: string; sector?: string; stage?: string; description?: string; website?: string; founderName?: string; founderEmail?: string },
     req?: { ip?: string; headers?: Record<string, any> }
 ) {
-    const startup = await Startup.findOne({ _id: startupId, investorId });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
 
-    const oldValue = startup.toObject();
-    Object.assign(startup, data);
-    await startup.save();
+    const oldValue = { ...startup };
+    const updatedStartup = await prisma.startup.update({
+        where: { id: startup.id },
+        data
+    });
 
     await writeAuditLog({
         investorId,
@@ -196,19 +219,24 @@ export async function updateStartup(
     });
 
     invalidateAnalyticsCache();
-    return startup;
+    return updatedStartup;
 }
 
 export async function updateValuation(investorId: string, startupId: string, currentValuation: number) {
-    const startup = await Startup.findOne({ _id: startupId, investorId });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
 
     const oldValuation = startup.currentValuation;
     const valuationPaise = Math.round(currentValuation * 100);
-    startup.currentValuation = valuationPaise;
-    await startup.save();
+
+    const updatedStartup = await prisma.startup.update({
+        where: { id: startup.id },
+        data: { currentValuation: valuationPaise }
+    });
 
     await writeAuditLog({
         investorId,
@@ -220,7 +248,7 @@ export async function updateValuation(investorId: string, startupId: string, cur
     });
 
     invalidateAnalyticsCache();
-    return startup;
+    return updatedStartup;
 }
 
 export async function recordExit(
@@ -228,7 +256,9 @@ export async function recordExit(
     startupId: string,
     data: { exitDate: string; exitValue: number; exitType: string }
 ) {
-    const startup = await Startup.findOne({ _id: startupId, investorId, status: 'active' });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId, status: 'active' }
+    });
     if (!startup) {
         throw createAppError('Active startup not found', 404, 'NOT_FOUND');
     }
@@ -236,20 +266,24 @@ export async function recordExit(
     const exitValuePaise = Math.round(data.exitValue * 100);
 
     // Create exit cashflow (positive = inflow)
-    await Cashflow.create({
-        investorId,
-        startupId,
-        amount: exitValuePaise,
-        date: new Date(data.exitDate),
-        type: 'exit',
-        roundName: data.exitType,
-        currency: 'INR',
-        notes: `Exit via ${data.exitType}`,
-        createdBy: investorId,
+    await prisma.cashflow.create({
+        data: {
+            investorId,
+            startupId,
+            amount: exitValuePaise,
+            date: new Date(data.exitDate),
+            type: 'exit',
+            roundName: data.exitType,
+            currency: 'INR',
+            notes: `Exit via ${data.exitType}`,
+            createdBy: investorId,
+        }
     });
 
-    startup.status = 'exited';
-    await startup.save();
+    const updatedStartup = await prisma.startup.update({
+        where: { id: startup.id },
+        data: { status: 'exited' }
+    });
 
     await writeAuditLog({
         investorId,
@@ -270,7 +304,9 @@ export async function addFollowOn(
     startupId: string,
     data: { amount: number; date: string; roundName: string; equityAcquired: number; valuationAtTime: number }
 ) {
-    const startup = await Startup.findOne({ _id: startupId, investorId });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
@@ -279,37 +315,45 @@ export async function addFollowOn(
     const valuationPaise = Math.round(data.valuationAtTime * 100);
 
     // Create follow-on cashflow
-    await Cashflow.create({
-        investorId,
-        startupId,
-        amount: -amountPaise,
-        date: new Date(data.date),
-        type: 'follow_on',
-        roundName: data.roundName,
-        valuationAtTime: valuationPaise,
-        equityAcquired: data.equityAcquired,
-        currency: 'INR',
-        notes: `Follow-on: ${data.roundName}`,
-        createdBy: investorId,
+    await prisma.cashflow.create({
+        data: {
+            investorId,
+            startupId,
+            amount: -amountPaise,
+            date: new Date(data.date),
+            type: 'follow_on',
+            roundName: data.roundName,
+            valuationAtTime: valuationPaise,
+            equityAcquired: data.equityAcquired,
+            currency: 'INR',
+            notes: `Follow-on: ${data.roundName}`,
+            createdBy: investorId,
+        }
     });
 
     // Create dilution event
     const preDilution = startup.currentEquityPercent;
     const postDilution = preDilution + data.equityAcquired;
 
-    await DilutionEvent.create({
-        startupId,
-        investorId,
-        roundName: data.roundName,
-        date: new Date(data.date),
-        preDilutionEquity: preDilution,
-        postDilutionEquity: Math.min(postDilution, 100),
-        roundValuation: valuationPaise,
+    await prisma.dilutionEvent.create({
+        data: {
+            startupId,
+            investorId,
+            roundName: data.roundName,
+            date: new Date(data.date),
+            preDilutionEquity: preDilution,
+            postDilutionEquity: Math.min(postDilution, 100),
+            roundValuation: valuationPaise,
+        }
     });
 
-    startup.currentEquityPercent = Math.min(postDilution, 100);
-    startup.currentValuation = valuationPaise;
-    await startup.save();
+    const updatedStartup = await prisma.startup.update({
+        where: { id: startup.id },
+        data: {
+            currentEquityPercent: Math.min(postDilution, 100),
+            currentValuation: valuationPaise
+        }
+    });
 
     await writeAuditLog({
         investorId,
@@ -324,13 +368,17 @@ export async function addFollowOn(
 }
 
 export async function softDeleteStartup(investorId: string, startupId: string) {
-    const startup = await Startup.findOne({ _id: startupId, investorId });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
 
-    startup.status = 'written_off';
-    await startup.save();
+    const updatedStartup = await prisma.startup.update({
+        where: { id: startup.id },
+        data: { status: 'written_off' }
+    });
 
     await writeAuditLog({
         investorId,
@@ -341,5 +389,5 @@ export async function softDeleteStartup(investorId: string, startupId: string) {
     });
 
     invalidateAnalyticsCache();
-    return startup;
+    return updatedStartup;
 }

@@ -1,5 +1,4 @@
-import { Startup } from '../models/Startup';
-import { Cashflow } from '../models/Cashflow';
+import { prisma } from '../db';
 import {
     calculateXIRR,
     calculateMOIC,
@@ -52,8 +51,11 @@ export async function getPortfolioAnalytics(investorId: string): Promise<Portfol
         return analyticsCache.data;
     }
 
-    const startups = await Startup.find({ investorId });
-    const allCashflows = await Cashflow.find({ investorId }).sort({ date: 1 });
+    const startups = await prisma.startup.findMany({ where: { investorId } });
+    const allCashflows = await prisma.cashflow.findMany({
+        where: { investorId },
+        orderBy: { date: 'asc' }
+    });
 
     let totalInvested = 0;
     let currentPortfolioValue = 0;
@@ -67,7 +69,7 @@ export async function getPortfolioAnalytics(investorId: string): Promise<Portfol
 
     for (const startup of startups) {
         const startupCashflows = allCashflows.filter(
-            cf => cf.startupId.toString() === startup._id.toString()
+            cf => cf.startupId === startup.id
         );
 
         // Sum invested amounts (negative cashflows = outflows)
@@ -118,7 +120,7 @@ export async function getPortfolioAnalytics(investorId: string): Promise<Portfol
             : 0;
 
         startupMetrics.push({
-            startupId: startup._id.toString(),
+            startupId: startup.id,
             name: startup.name,
             sector: startup.sector,
             stage: startup.stage,

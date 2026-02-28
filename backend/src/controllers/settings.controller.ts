@@ -1,14 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { Investor } from '../models/Investor';
-import { AuditLog } from '../models/AuditLog';
-import { Startup } from '../models/Startup';
-import { Cashflow } from '../models/Cashflow';
-import { MonthlyUpdate } from '../models/MonthlyUpdate';
-import { DocumentModel } from '../models/Document';
-import { DilutionEvent } from '../models/DilutionEvent';
-import { Alert } from '../models/Alert';
-import { AlertConfiguration } from '../models/AlertConfiguration';
+import { prisma } from '../db';
 import * as authService from '../services/auth.service';
 import { changePasswordSchema } from '../validators/auth.validators';
 
@@ -45,8 +37,13 @@ export async function getAuditLog(req: AuthRequest, res: Response, next: NextFun
         const skip = (page - 1) * limit;
 
         const [logs, total] = await Promise.all([
-            AuditLog.find({ investorId: req.investor!.id }).sort({ createdAt: -1 }).skip(skip).limit(limit),
-            AuditLog.countDocuments({ investorId: req.investor!.id }),
+            prisma.auditLog.findMany({
+                where: { investorId: req.investor!.id },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit
+            }),
+            prisma.auditLog.count({ where: { investorId: req.investor!.id } }),
         ]);
 
         res.json({
@@ -63,14 +60,20 @@ export async function exportData(req: AuthRequest, res: Response, next: NextFunc
     try {
         const investorId = req.investor!.id;
         const [investor, startups, cashflows, updates, documents, dilutionEvents, alerts, alertConfig] = await Promise.all([
-            Investor.findById(investorId).select('-passwordHash -passwordResetToken -passwordResetExpires -twoFactorSecret'),
-            Startup.find({ investorId }),
-            Cashflow.find({ investorId }),
-            MonthlyUpdate.find({ submittedBy: investorId }),
-            DocumentModel.find({ investorId }),
-            DilutionEvent.find({ investorId }),
-            Alert.find({ investorId }),
-            AlertConfiguration.findOne({ investorId }),
+            prisma.investor.findUnique({
+                where: { id: investorId },
+                select: {
+                    id: true, name: true, email: true, role: true,
+                    subscriptionTier: true, lastLoginAt: true, createdAt: true, updatedAt: true
+                }
+            }),
+            prisma.startup.findMany({ where: { investorId } }),
+            prisma.cashflow.findMany({ where: { investorId } }),
+            prisma.monthlyUpdate.findMany({ where: { submittedBy: investorId } }),
+            prisma.document.findMany({ where: { investorId } }),
+            prisma.dilutionEvent.findMany({ where: { investorId } }),
+            prisma.alert.findMany({ where: { investorId } }),
+            prisma.alertConfiguration.findUnique({ where: { investorId } }),
         ]);
 
         res.json({

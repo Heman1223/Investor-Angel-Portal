@@ -1,27 +1,16 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client';
 import { logger } from './utils/logger';
 
-dotenv.config();
-
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/portfolioos';
+const prisma = new PrismaClient();
 
 export async function connectDB(): Promise<void> {
     try {
-        await mongoose.connect(MONGODB_URI);
-        logger.info('MongoDB connected successfully');
+        await prisma.$connect();
+        logger.info('PostgreSQL connected successfully via Prisma');
     } catch (error) {
-        logger.error('MongoDB connection error:', error);
+        logger.error('PostgreSQL connection error:', error);
         process.exit(1);
     }
-
-    mongoose.connection.on('error', (err) => {
-        logger.error('MongoDB runtime error:', err);
-    });
-
-    mongoose.connection.on('disconnected', () => {
-        logger.warn('MongoDB disconnected');
-    });
 }
 
-export default mongoose;
+export { prisma };

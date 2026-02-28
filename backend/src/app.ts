@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { errorHandler } from './middleware/errorHandler';
+import { responseMapper } from './middleware/responseMapper';
 import authRoutes from './routes/auth.routes';
 import startupRoutes from './routes/startup.routes';
 import dashboardRoutes from './routes/dashboard.routes';
@@ -28,6 +29,8 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+// Response mapping (id -> _id)
+app.use(responseMapper);
 
 // API Routes
 app.use('/api/auth', authRoutes);

@@ -13,13 +13,13 @@ const DOC_TYPE_LABELS: Record<string, string> = {
     other: 'Other',
 };
 
-const DOC_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-    sha: { bg: '#dcfce7', color: '#15803d' },
-    term_sheet: { bg: '#dbeafe', color: '#1e40af' },
-    cap_table: { bg: '#f3e8ff', color: '#7c3aed' },
-    legal: { bg: '#fef3c7', color: '#b45309' },
-    financial_statement: { bg: '#fee2e2', color: '#b91c1c' },
-    other: { bg: '#f1f5f9', color: '#475569' },
+const DOC_TYPE_COLORS: Record<string, { bg: string; color: string; border: string }> = {
+    sha: { bg: 'rgba(74,222,128,0.1)', color: '#4ADE80', border: 'rgba(74,222,128,0.2)' },
+    term_sheet: { bg: 'rgba(96,165,250,0.1)', color: '#60A5FA', border: 'rgba(96,165,250,0.2)' },
+    cap_table: { bg: 'rgba(167,139,250,0.1)', color: '#A78BFA', border: 'rgba(167,139,250,0.2)' },
+    legal: { bg: 'rgba(251,191,36,0.1)', color: '#FBBF24', border: 'rgba(251,191,36,0.2)' },
+    financial_statement: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.2)' },
+    other: { bg: 'rgba(255,255,255,0.05)', color: '#7A8098', border: 'rgba(255,255,255,0.1)' },
 };
 
 export default function DocumentsPage() {
@@ -42,22 +42,22 @@ export default function DocumentsPage() {
     });
 
     if (isLoading) {
-        return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="card animate-shimmer h-16" />)}</div>;
+        return <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{[1, 2, 3].map(i => <div key={i} className="card animate-shimmer" style={{ height: 64 }} />)}</div>;
     }
 
     if (!documents || documents.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in">
-                <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6" style={{
-                    background: 'var(--color-primary-50)',
-                    border: '2px dashed var(--color-primary)',
+            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+                <div style={{
+                    width: 80, height: 80, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24,
+                    background: 'rgba(197,164,84,0.06)', border: '2px dashed rgba(197,164,84,0.3)',
                 }}>
                     <FolderOpen size={36} style={{ color: 'var(--color-primary)' }} />
                 </div>
-                <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>
                     No documents uploaded yet
                 </h2>
-                <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
                     Organise your investment agreements here.
                 </p>
             </div>
@@ -65,18 +65,18 @@ export default function DocumentsPage() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
+        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                    <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Documents</h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                    <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>Documents</h1>
+                    <p style={{ fontSize: 13, marginTop: 4, color: 'var(--color-text-secondary)' }}>
                         {documents.length} document{documents.length !== 1 ? 's' : ''} across your portfolio
                     </p>
                 </div>
             </div>
 
             <div className="card" style={{ padding: 0 }}>
-                <table className="w-full">
+                <table style={{ width: '100%' }}>
                     <thead>
                         <tr>
                             <th style={{ padding: '12px 20px' }}>File Name</th>
@@ -94,49 +94,52 @@ export default function DocumentsPage() {
                             return (
                                 <tr key={doc._id}>
                                     <td style={{ padding: '14px 20px' }}>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{
-                                                background: ext === 'pdf' ? '#fee2e2' : ext === 'docx' || ext === 'doc' ? '#dbeafe' : '#f1f5f9',
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <div style={{
+                                                width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                                background: ext === 'pdf' ? 'rgba(248,113,113,0.1)' : ext === 'docx' || ext === 'doc' ? 'rgba(96,165,250,0.1)' : 'rgba(255,255,255,0.05)',
+                                                border: `1px solid ${ext === 'pdf' ? 'rgba(248,113,113,0.2)' : ext === 'docx' || ext === 'doc' ? 'rgba(96,165,250,0.2)' : 'rgba(255,255,255,0.1)'}`,
                                             }}>
-                                                <span className="text-[10px] font-bold" style={{
-                                                    color: ext === 'pdf' ? '#ef4444' : ext === 'docx' || ext === 'doc' ? '#3b82f6' : '#64748b',
+                                                <span style={{
+                                                    fontSize: 10, fontWeight: 700, fontFamily: "var(--font-mono, 'IBM Plex Mono', monospace)",
+                                                    color: ext === 'pdf' ? '#F87171' : ext === 'docx' || ext === 'doc' ? '#60A5FA' : '#7A8098',
                                                 }}>
                                                     {ext.toUpperCase()}
                                                 </span>
                                             </div>
-                                            <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                                            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>
                                                 {doc.fileName}
                                             </span>
                                         </div>
                                     </td>
-                                    <td className="text-sm" style={{ padding: '14px 20px', color: 'var(--color-text-secondary)' }}>
+                                    <td style={{ padding: '14px 20px', fontSize: 14, color: 'var(--color-text-secondary)' }}>
                                         {doc.startupId?.name || '—'}
                                     </td>
                                     <td style={{ padding: '14px 20px' }}>
                                         <span className="badge" style={{
                                             background: typeStyle.bg,
                                             color: typeStyle.color,
-                                            fontSize: '11px',
+                                            border: `1px solid ${typeStyle.border}`,
+                                            fontSize: 11,
                                             padding: '2px 8px',
                                         }}>
                                             {DOC_TYPE_LABELS[doc.documentType] || doc.documentType}
                                         </span>
                                     </td>
-                                    <td className="text-xs" style={{ padding: '14px 20px', color: 'var(--color-text-muted)' }}>
+                                    <td style={{ padding: '14px 20px', fontSize: 12, color: 'var(--color-text-muted)' }}>
                                         {(doc.fileSizeBytes / 1024).toFixed(0)} KB
                                     </td>
-                                    <td className="text-xs" style={{ padding: '14px 20px', color: 'var(--color-text-muted)' }}>
+                                    <td style={{ padding: '14px 20px', fontSize: 12, color: 'var(--color-text-muted)' }}>
                                         {formatDate(doc.uploadedAt)}
                                     </td>
                                     <td style={{ padding: '14px 20px' }}>
-                                        <div className="flex gap-1">
-                                            <button className="p-1.5 rounded-lg hover:bg-gray-100" style={{ color: 'var(--color-text-muted)' }}>
+                                        <div style={{ display: 'flex', gap: 4 }}>
+                                            <button style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}>
                                                 <Download size={14} />
                                             </button>
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(doc._id); }}
-                                                className="p-1.5 rounded-lg hover:bg-red-50"
-                                                style={{ color: 'var(--color-text-muted)' }}
+                                                style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
                                             >
                                                 <Trash2 size={14} />
                                             </button>

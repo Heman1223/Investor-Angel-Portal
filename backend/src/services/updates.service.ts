@@ -1,5 +1,4 @@
-import { MonthlyUpdate } from '../models/MonthlyUpdate';
-import { Startup } from '../models/Startup';
+import { prisma } from '../db';
 import { createAppError } from '../middleware/errorHandler';
 import { writeAuditLog } from '../middleware/auditLog';
 import { calculateRunway } from './financials.service';
@@ -7,24 +6,42 @@ import { runAlertEngine } from './alerts.service';
 import { invalidateAnalyticsCache } from './analytics.service';
 
 export async function getUpdates(investorId: string, startupId: string) {
-    // Verify startup belongs to investor
-    const startup = await Startup.findOne({ _id: startupId, investorId });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
 
-    return MonthlyUpdate.find({ startupId }).sort({ month: -1 });
+    return prisma.monthlyUpdate.findMany({
+        where: { startupId },
+        orderBy: { month: 'desc' }
+    });
 }
 
 export async function getAllUpdates(investorId: string) {
-    const startups = await Startup.find({ investorId }).select('_id name');
-    const startupIds = startups.map(s => s._id);
+    const updates = await prisma.monthlyUpdate.findMany({
+        where: { startup: { investorId } },
+        include: {
+            startup: {
+                select: { id: true, name: true, sector: true }
+            }
+        },
+        orderBy: { month: 'desc' }
+    });
 
-    const updates = await MonthlyUpdate.find({ startupId: { $in: startupIds } })
-        .populate('startupId', 'name sector')
-        .sort({ month: -1 });
-
-    return updates;
+    return updates.map(u => {
+        const { startup, ...rest } = u;
+        return {
+            ...rest,
+            // Replicate Mongoose `.populate('startupId')` behavior
+            startupId: startup ? {
+                _id: startup.id,
+                name: startup.name,
+                sector: startup.sector
+            } : u.startupId
+        };
+    });
 }
 
 export async function createUpdate(
@@ -39,7 +56,9 @@ export async function createUpdate(
         notes?: string;
     }
 ) {
-    const startup = await Startup.findOne({ _id: startupId, investorId });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
@@ -53,22 +72,26 @@ export async function createUpdate(
     const runwayMonths = calculateRunway(cashBalancePaise, burnRatePaise);
 
     try {
-        const update = await MonthlyUpdate.create({
-            startupId,
-            submittedBy: investorId,
-            month: data.month,
-            revenue: revenuePaise,
-            burnRate: burnRatePaise,
-            cashBalance: cashBalancePaise,
-            runwayMonths,
-            valuationUpdate: data.valuationUpdate ? Math.round(data.valuationUpdate * 100) : undefined,
-            notes: data.notes,
+        const update = await prisma.monthlyUpdate.create({
+            data: {
+                startupId,
+                submittedBy: investorId,
+                month: data.month,
+                revenue: revenuePaise,
+                burnRate: burnRatePaise,
+                cashBalance: cashBalancePaise,
+                runwayMonths,
+                valuationUpdate: data.valuationUpdate ? Math.round(data.valuationUpdate * 100) : null,
+                notes: data.notes,
+            }
         });
 
         // Update startup valuation if provided
         if (data.valuationUpdate) {
-            startup.currentValuation = Math.round(data.valuationUpdate * 100);
-            await startup.save();
+            await prisma.startup.update({
+                where: { id: startup.id },
+                data: { currentValuation: Math.round(data.valuationUpdate * 100) }
+            });
             invalidateAnalyticsCache();
         }
 
@@ -79,13 +102,14 @@ export async function createUpdate(
             investorId,
             action: 'CREATE_MONTHLY_UPDATE',
             entityType: 'monthly_update',
-            entityId: update._id.toString(),
+            entityId: update.id,
             newValue: { month: data.month, revenue: data.revenue, burnRate: data.burnRate, cashBalance: data.cashBalance },
         });
 
         return update;
     } catch (error: any) {
-        if (error.code === 11000) {
+        // Prisma unique constraint violation code is P2002
+        if (error.code === 'P2002') {
             throw createAppError('An update for this month already exists', 409, 'DUPLICATE');
         }
         throw error;

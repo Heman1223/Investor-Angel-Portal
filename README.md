@@ -16,7 +16,7 @@ A secure, login-protected web-based portfolio management portal for angel invest
 | Layer | Technology |
 |-------|-----------|
 | Backend | Node.js, Express.js, TypeScript |
-| Database | MongoDB + Mongoose |
+| Database | PostgreSQL + Prisma ORM |
 | Auth | JWT (access + refresh tokens) |
 | Frontend | React 18, TypeScript, Vite |
 | Styling | TailwindCSS v4 |
@@ -27,7 +27,7 @@ A secure, login-protected web-based portfolio management portal for angel invest
 
 ### Prerequisites
 - Node.js v18+
-- MongoDB running locally (or provide a MongoDB Atlas URI)
+- PostgreSQL (Local or Supabase)
 
 ### 1. Backend Setup
 
@@ -36,19 +36,26 @@ cd backend
 npm install
 ```
 
-Create a `.env` file (or use the one provided):
+Create a `.env` file (see `.env.example`):
 ```
 PORT=5000
 NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/portfolioos
+DATABASE_URL="postgresql://user:password@host:port/dbname?pgbouncer=true"
 JWT_SECRET=your-64-byte-secret
 JWT_REFRESH_SECRET=your-64-byte-refresh-secret
 FRONTEND_URL=http://localhost:5173
 UPLOAD_DIR=./uploads
 ```
 
-Seed the database with demo data:
+Sync the database schema and seed demo data:
 ```bash
+# Push the schema to your database
+npx prisma db push
+
+# (Optional) Open Prisma Studio to browse data
+npx prisma studio
+
+# Seed the demo data
 npx ts-node src/seed.ts
 ```
 
@@ -77,29 +84,30 @@ Open http://localhost:5173
 
 ```
 ├── backend/
+│   ├── prisma/
+│   │   └── schema.prisma    # Single source of truth for DB schema
 │   ├── src/
 │   │   ├── controllers/     # Request handling
 │   │   ├── services/        # ALL business logic & financial calculations
-│   │   ├── models/          # 9 Mongoose schemas
 │   │   ├── routes/          # Express routes
-│   │   ├── middleware/      # Auth, rate limiting, audit logging
-│   │   ├── validators/     # Zod schemas
-│   │   ├── jobs/           # Cron jobs (daily alert checks)
-│   │   ├── utils/          # Logger
-│   │   ├── db.ts           # MongoDB connection
-│   │   ├── app.ts          # Express app
-│   │   ├── server.ts       # Entry point
-│   │   └── seed.ts         # Demo data seeder
+│   │   ├── middleware/      # Auth, rate limiting, audit logging, response mapping
+│   │   ├── validators/      # Zod schemas
+│   │   ├── jobs/            # Cron jobs (daily alert checks)
+│   │   ├── utils/           # Logger
+│   │   ├── db.ts            # Prisma Client initialization
+│   │   ├── app.ts           # Express app
+│   │   ├── server.ts        # Entry point
+│   │   └── seed.ts          # Demo data seeder
 │   └── .env.example
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/          # 7 page components
-│   │   ├── components/     # Layout + UI components
-│   │   ├── context/        # Auth context
-│   │   ├── services/       # Axios API client
-│   │   ├── utils/          # Formatters
-│   │   └── App.tsx         # Root with routing
+│   │   ├── pages/           # 7 page components
+│   │   ├── components/      # Layout + UI components
+│   │   ├── context/         # Auth context
+│   │   ├── services/        # Axios API client
+│   │   ├── utils/           # Formatters
+│   │   └── App.tsx          # Root with routing
 │   └── .env.example
 │
 └── README.md

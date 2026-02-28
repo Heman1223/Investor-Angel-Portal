@@ -1,8 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { DocumentModel } from '../models/Document';
-import { Startup } from '../models/Startup';
+import { prisma } from '../db';
 import { createAppError } from '../middleware/errorHandler';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
@@ -13,18 +12,37 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 }
 
 export async function getDocuments(investorId: string, startupId: string) {
-    const startup = await Startup.findOne({ _id: startupId, investorId });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
 
-    return DocumentModel.find({ startupId, isArchived: false }).sort({ uploadedAt: -1 });
+    return prisma.document.findMany({
+        where: { startupId, isArchived: false },
+        orderBy: { uploadedAt: 'desc' }
+    });
 }
 
 export async function getAllDocuments(investorId: string) {
-    return DocumentModel.find({ investorId, isArchived: false })
-        .populate('startupId', 'name')
-        .sort({ uploadedAt: -1 });
+    const docs = await prisma.document.findMany({
+        where: { investorId, isArchived: false },
+        include: { startup: { select: { id: true, name: true } } },
+        orderBy: { uploadedAt: 'desc' }
+    });
+
+    return docs.map(doc => {
+        const { startup, ...rest } = doc;
+        return {
+            ...rest,
+            // Replicate Mongoose `.populate('startupId', 'name')` behavior
+            startupId: startup ? {
+                _id: startup.id,
+                name: startup.name
+            } : doc.startupId
+        };
+    });
 }
 
 export async function uploadDocument(
@@ -34,7 +52,9 @@ export async function uploadDocument(
     documentType: string,
     description?: string
 ) {
-    const startup = await Startup.findOne({ _id: startupId, investorId });
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
@@ -48,23 +68,27 @@ export async function uploadDocument(
 
     fs.writeFileSync(path.join(filePath, `${uuidv4()}-${file.originalname}`), file.buffer);
 
-    const doc = await DocumentModel.create({
-        startupId,
-        investorId,
-        fileName: file.originalname,
-        fileKey,
-        fileSizeBytes: file.size,
-        mimeType: file.mimetype,
-        documentType,
-        description,
-        uploadedBy: investorId,
+    const doc = await prisma.document.create({
+        data: {
+            startupId,
+            investorId,
+            fileName: file.originalname,
+            fileKey,
+            fileSizeBytes: file.size,
+            mimeType: file.mimetype,
+            documentType,
+            description,
+            uploadedBy: investorId,
+        }
     });
 
     return doc;
 }
 
 export async function getDownloadUrl(investorId: string, documentId: string) {
-    const doc = await DocumentModel.findOne({ _id: documentId, investorId, isArchived: false });
+    const doc = await prisma.document.findFirst({
+        where: { id: documentId, investorId, isArchived: false }
+    });
     if (!doc) {
         throw createAppError('Document not found', 404, 'NOT_FOUND');
     }
@@ -79,13 +103,17 @@ export async function getDownloadUrl(investorId: string, documentId: string) {
 }
 
 export async function archiveDocument(investorId: string, documentId: string) {
-    const doc = await DocumentModel.findOneAndUpdate(
-        { _id: documentId, investorId },
-        { isArchived: true },
-        { new: true }
-    );
+    const doc = await prisma.document.findFirst({
+        where: { id: documentId, investorId }
+    });
     if (!doc) {
         throw createAppError('Document not found', 404, 'NOT_FOUND');
     }
-    return doc;
+
+    const updatedDoc = await prisma.document.update({
+        where: { id: documentId },
+        data: { isArchived: true }
+    });
+
+    return updatedDoc;
 }

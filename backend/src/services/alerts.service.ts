@@ -1,15 +1,14 @@
-import { Alert, AlertType, AlertSeverity } from '../models/Alert';
-import { AlertConfiguration } from '../models/AlertConfiguration';
-import { MonthlyUpdate } from '../models/MonthlyUpdate';
-import { Startup } from '../models/Startup';
-import { Cashflow } from '../models/Cashflow';
+import { prisma } from '../db';
+
+export type AlertType = 'CASH_ZERO' | 'RUNWAY_CRITICAL' | 'RUNWAY_WARNING' | 'REVENUE_DROP' | 'IRR_NEGATIVE' | 'MOIC_LOW' | 'UPDATE_OVERDUE';
+export type AlertSeverity = 'RED' | 'YELLOW' | 'GREEN';
 import { calculateRunway, calculateRevenueChangeMoM, calculateXIRR, calculateMOIC, calculateCurrentValue } from './financials.service';
 import { logger } from '../utils/logger';
 
 async function getOrCreateConfig(investorId: string) {
-    let config = await AlertConfiguration.findOne({ investorId });
+    let config = await prisma.alertConfiguration.findUnique({ where: { investorId } });
     if (!config) {
-        config = await AlertConfiguration.create({ investorId });
+        config = await prisma.alertConfiguration.create({ data: { investorId } });
     }
     return config;
 }
@@ -22,21 +21,25 @@ async function createAlertIfNew(params: {
     message: string;
 }) {
     // Deduplication: don't create duplicate unread alerts
-    const existing = await Alert.findOne({
-        startupId: params.startupId,
-        alertType: params.alertType,
-        isRead: false,
+    const existing = await prisma.alert.findFirst({
+        where: {
+            startupId: params.startupId,
+            alertType: params.alertType,
+            isRead: false,
+        }
     });
     if (existing) return;
 
-    await Alert.create({
-        investorId: params.investorId,
-        startupId: params.startupId,
-        alertType: params.alertType,
-        severity: params.severity,
-        message: params.message,
-        isRead: false,
-        triggeredAt: new Date(),
+    await prisma.alert.create({
+        data: {
+            investorId: params.investorId,
+            startupId: params.startupId,
+            alertType: params.alertType,
+            severity: params.severity,
+            message: params.message,
+            isRead: false,
+            triggeredAt: new Date(),
+        }
     });
 
     logger.info(`Alert created: ${params.alertType} for startup ${params.startupId}`);
@@ -45,13 +48,17 @@ async function createAlertIfNew(params: {
 export async function runAlertEngine(investorId: string, startupId: string): Promise<void> {
     try {
         const config = await getOrCreateConfig(investorId);
-        const startup = await Startup.findById(startupId);
+        const startup = await prisma.startup.findUnique({ where: { id: startupId } });
         if (!startup || startup.status !== 'active') return;
 
         const name = startup.name;
 
         // 1. Check runway from latest monthly update
-        const latestUpdate = await MonthlyUpdate.findOne({ startupId }).sort({ month: -1 });
+        const latestUpdate = await prisma.monthlyUpdate.findFirst({
+            where: { startupId },
+            orderBy: { month: 'desc' }
+        });
+
         if (latestUpdate) {
             const runway = calculateRunway(latestUpdate.cashBalance, latestUpdate.burnRate);
 
@@ -79,10 +86,13 @@ export async function runAlertEngine(investorId: string, startupId: string): Pro
             }
 
             // 2. Check revenue drop MoM
-            const previousUpdate = await MonthlyUpdate.findOne({
-                startupId,
-                month: { $lt: latestUpdate.month },
-            }).sort({ month: -1 });
+            const previousUpdate = await prisma.monthlyUpdate.findFirst({
+                where: {
+                    startupId,
+                    month: { lt: latestUpdate.month }
+                },
+                orderBy: { month: 'desc' }
+            });
 
             if (previousUpdate) {
                 const revChange = calculateRevenueChangeMoM(latestUpdate.revenue, previousUpdate.revenue);
@@ -98,7 +108,10 @@ export async function runAlertEngine(investorId: string, startupId: string): Pro
         }
 
         // 3. Check IRR
-        const cashflows = await Cashflow.find({ startupId }).sort({ date: 1 });
+        const cashflows = await prisma.cashflow.findMany({
+            where: { startupId },
+            orderBy: { date: 'asc' }
+        });
         const invested = cashflows.filter(cf => cf.amount < 0).reduce((sum, cf) => sum + Math.abs(cf.amount), 0);
         const currentValue = calculateCurrentValue(invested, startup.currentValuation, startup.entryValuation);
 
@@ -132,10 +145,15 @@ export async function runAlertEngine(investorId: string, startupId: string): Pro
 
 export async function checkOverdueUpdates(investorId: string): Promise<void> {
     const config = await getOrCreateConfig(investorId);
-    const activeStartups = await Startup.find({ investorId, status: 'active' });
+    const activeStartups = await prisma.startup.findMany({
+        where: { investorId, status: 'active' }
+    });
 
     for (const startup of activeStartups) {
-        const latestUpdate = await MonthlyUpdate.findOne({ startupId: startup._id }).sort({ month: -1 });
+        const latestUpdate = await prisma.monthlyUpdate.findFirst({
+            where: { startupId: startup.id },
+            orderBy: { month: 'desc' }
+        });
 
         let daysSince: number;
         if (latestUpdate) {
@@ -146,8 +164,8 @@ export async function checkOverdueUpdates(investorId: string): Promise<void> {
 
         if (daysSince > config.updateOverdueDays) {
             await createAlertIfNew({
-                investorId: investorId.toString(),
-                startupId: startup._id.toString(),
+                investorId: investorId,
+                startupId: startup.id,
                 alertType: 'UPDATE_OVERDUE',
                 severity: 'YELLOW',
                 message: `${startup.name}: No founder update received in ${daysSince} days`,
@@ -159,24 +177,42 @@ export async function checkOverdueUpdates(investorId: string): Promise<void> {
 export async function getAlerts(investorId: string, isRead?: boolean) {
     const filter: any = { investorId };
     if (isRead !== undefined) filter.isRead = isRead;
-    return Alert.find(filter).populate('startupId', 'name').sort({ triggeredAt: -1 });
+
+    const alerts = await prisma.alert.findMany({
+        where: filter,
+        include: { startup: { select: { id: true, name: true } } },
+        orderBy: { triggeredAt: 'desc' }
+    });
+
+    return alerts.map(alert => {
+        const { startup, ...rest } = alert;
+        return {
+            ...rest,
+            startupId: startup ? { _id: startup.id, name: startup.name } : alert.startupId
+        };
+    });
 }
 
 export async function markAlertRead(investorId: string, alertId: string) {
-    const alert = await Alert.findOneAndUpdate(
-        { _id: alertId, investorId },
-        { isRead: true, resolvedAt: new Date() },
-        { new: true }
-    );
+    // Verify ownership
+    const alert = await prisma.alert.findFirst({
+        where: { id: alertId, investorId }
+    });
     if (!alert) throw new Error('Alert not found');
-    return alert;
+
+    const updatedAlert = await prisma.alert.update({
+        where: { id: alertId },
+        data: { isRead: true, resolvedAt: new Date() }
+    });
+
+    return updatedAlert;
 }
 
 export async function markAllRead(investorId: string) {
-    await Alert.updateMany(
-        { investorId, isRead: false },
-        { isRead: true, resolvedAt: new Date() }
-    );
+    await prisma.alert.updateMany({
+        where: { investorId, isRead: false },
+        data: { isRead: true, resolvedAt: new Date() }
+    });
     return { message: 'All alerts marked as read' };
 }
 
@@ -193,7 +229,11 @@ export async function updateAlertConfig(investorId: string, data: Partial<{
     moicWarningThreshold: number;
 }>) {
     const config = await getOrCreateConfig(investorId);
-    Object.assign(config, data);
-    await config.save();
-    return config;
+
+    const updatedConfig = await prisma.alertConfiguration.update({
+        where: { id: config.id },
+        data
+    });
+
+    return updatedConfig;
 }

@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Investor {
+  id                   String    @id @default(cuid())
+  name                 String
+  email                String    @unique
+  passwordHash         String
+  role                 String    @default("investor")
+  subscriptionTier     String    @default("solo")
+  twoFactorSecret      String?
+  twoFactorEnabled     Boolean   @default(false)
+  lastLoginAt          DateTime?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  startups             Startup[]
+  monthlyUpdates       MonthlyUpdate[]
+  cashflows            Cashflow[]
+  dilutionEvents       DilutionEvent[]
+  documents            Document[]
+  alerts               Alert[]
+  alertConfiguration   AlertConfiguration?
+  auditLogs            AuditLog[]
+}
+
+model Startup {
+  id                   String    @id @default(cuid())
+  investorId           String
+  investor             Investor  @relation(fields: [investorId], references: [id])
+  name                 String
+  sector               String
+  stage                String
+  status               String    @default("active")
+  entryValuation       Float
+  currentValuation     Float
+  equityPercent        Float
+  currentEquityPercent Float
+  investmentDate       DateTime
+  description          String?
+  website              String?
+  founderName          String?
+  founderEmail         String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  monthlyUpdates       MonthlyUpdate[]
+  cashflows            Cashflow[]
+  dilutionEvents       DilutionEvent[]
+  documents            Document[]
+  alerts               Alert[]
+}
+
+model MonthlyUpdate {
+  id              String   @id @default(cuid())
+  startupId       String
+  startup         Startup  @relation(fields: [startupId], references: [id])
+  submittedBy     String
+  investor        Investor @relation(fields: [submittedBy], references: [id])
+  month           String
+  revenue         Float
+  burnRate        Float
+  cashBalance     Float
+  runwayMonths    Float?
+  valuationUpdate Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@unique([startupId, month])
+}
+
+model Cashflow {
+  id              String   @id @default(cuid())
+  investorId      String
+  investor        Investor @relation(fields: [investorId], references: [id])
+  startupId       String
+  startup         Startup  @relation(fields: [startupId], references: [id])
+  amount          Float
+  date            DateTime
+  type            String
+  roundName       String?
+  valuationAtTime Float?
+  equityAcquired  Float?
+  currency        String   @default("INR")
+  notes           String?
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model DilutionEvent {
+  id                 String   @id @default(cuid())
+  startupId          String
+  startup            Startup  @relation(fields: [startupId], references: [id])
+  investorId         String
+  investor           Investor @relation(fields: [investorId], references: [id])
+  roundName          String
+  date               DateTime
+  preDilutionEquity  Float
+  postDilutionEquity Float
+  newInvestor        String?
+  roundValuation     Float?
+  notes              String?
+  createdAt          DateTime @default(now())
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  startupId     String
+  startup       Startup  @relation(fields: [startupId], references: [id])
+  investorId    String
+  investor      Investor @relation(fields: [investorId], references: [id])
+  fileName      String
+  fileKey       String   @unique
+  fileSizeBytes Int
+  mimeType      String
+  documentType  String
+  description   String?
+  uploadedBy    String
+  isArchived    Boolean  @default(false)
+  uploadedAt    DateTime @default(now())
+}
+
+model Alert {
+  id          String    @id @default(cuid())
+  investorId  String
+  investor    Investor  @relation(fields: [investorId], references: [id])
+  startupId   String
+  startup     Startup   @relation(fields: [startupId], references: [id])
+  alertType   String
+  severity    String
+  message     String
+  isRead      Boolean   @default(false)
+  triggeredAt DateTime  @default(now())
+  resolvedAt  DateTime?
+}
+
+model AlertConfiguration {
+  id                      String   @id @default(cuid())
+  investorId              String   @unique
+  investor                Investor @relation(fields: [investorId], references: [id])
+  runwayWarningMonths     Int      @default(6)
+  runwayCriticalMonths    Int      @default(3)
+  revenueDropWarningPct   Float    @default(15)
+  updateOverdueDays       Int      @default(45)
+  irrNegativeThresholdPct Float    @default(-20)
+  moicWarningThreshold    Float    @default(0.75)
+  updatedAt               DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  investorId String
+  investor   Investor @relation(fields: [investorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+}

@@ -35,27 +35,27 @@ export default function AlertsPage() {
     const unreadCount = alerts?.filter((a: any) => !a.isRead).length || 0;
 
     if (isLoading) {
-        return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="card animate-shimmer h-16" />)}</div>;
+        return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="card animate-shimmer" style={{ height: 64 }} />)}</div>;
     }
 
     if (!alerts || alerts.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in">
-                <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6" style={{ background: 'rgba(34, 197, 94, 0.1)' }}>
+            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+                <div style={{ width: 80, height: 80, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)' }}>
                     <Check size={36} style={{ color: 'var(--color-green)' }} />
                 </div>
-                <h2 className="font-display text-2xl mb-2">All clear</h2>
-                <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>No risk flags in your portfolio.</p>
+                <h2 className="font-display" style={{ fontSize: 24, marginBottom: 8 }}>All clear</h2>
+                <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>No risk flags in your portfolio.</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
+        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                    <h1 className="font-display text-3xl" style={{ color: 'var(--color-text-primary)' }}>Alerts</h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                    <h1 className="font-display" style={{ fontSize: 28, color: 'var(--color-text-primary)' }}>Alerts</h1>
+                    <p style={{ fontSize: 13, marginTop: 4, color: 'var(--color-text-secondary)' }}>
                         {unreadCount > 0 ? `${unreadCount} unread alert${unreadCount > 1 ? 's' : ''}` : 'No unread alerts'}
                     </p>
                 </div>
@@ -66,40 +66,43 @@ export default function AlertsPage() {
                 )}
             </div>
 
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {alerts.map((alert: any) => (
                     <div
                         key={alert._id}
-                        className="card flex items-start gap-4"
+                        className="card"
                         style={{
+                            display: 'flex', alignItems: 'flex-start', gap: 16,
                             borderLeft: `3px solid ${alert.severity === 'RED' ? 'var(--color-red)' : 'var(--color-yellow)'}`,
-                            opacity: alert.isRead ? 0.6 : 1,
+                            opacity: alert.isRead ? 0.5 : 1,
                         }}
                     >
                         <div
-                            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
                             style={{
-                                background: alert.severity === 'RED' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2,
+                                background: alert.severity === 'RED' ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
+                                border: `1px solid ${alert.severity === 'RED' ? 'rgba(248,113,113,0.2)' : 'rgba(251,191,36,0.2)'}`,
                             }}
                         >
                             <AlertTriangle size={16} style={{ color: alert.severity === 'RED' ? 'var(--color-red)' : 'var(--color-yellow)' }} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className={`badge ${alert.severity === 'RED' ? 'badge-red' : 'badge-yellow'}`}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                <span className={`badge ${alert.severity === 'RED' ? 'badge-red' : 'badge-yellow'}`} style={{ fontSize: 11 }}>
                                     {alert.severity}
                                 </span>
-                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
                                     {alert.alertType.replace(/_/g, ' ')}
                                 </span>
                             </div>
-                            <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>{alert.message}</p>
-                            <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{formatDate(alert.triggeredAt)}</p>
+                            <p style={{ fontSize: 14, color: 'var(--color-text-primary)' }}>{alert.message}</p>
+                            <p style={{ fontSize: 12, marginTop: 4, color: 'var(--color-text-muted)' }}>{formatDate(alert.triggeredAt)}</p>
                         </div>
                         {!alert.isRead && (
                             <button
                                 onClick={() => markReadMutation.mutate(alert._id)}
-                                className="btn btn-secondary btn-sm flex-shrink-0"
+                                className="btn btn-secondary btn-sm"
+                                style={{ flexShrink: 0 }}
                             >
                                 <Check size={14} /> Read
                             </button>

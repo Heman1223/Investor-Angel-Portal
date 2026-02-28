@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import PortfolioPage from './pages/PortfolioPage';
@@ -11,6 +10,7 @@ import AlertsPage from './pages/AlertsPage';
 import DocumentsPage from './pages/DocumentsPage';
 import SettingsPage from './pages/SettingsPage';
 import './index.css';
+import MainLayout from './components/layout/Layouts';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,7 +28,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg-primary)' }}>
-        <div className="animate-pulse text-[var(--color-primary)] text-xl font-display">AngelFlow</div>
+        <div className="animate-pulse" style={{ fontFamily: "var(--font-mono, 'IBM Plex Mono', monospace)", fontSize: 16, letterSpacing: '0.24em', color: 'var(--color-primary)', fontWeight: 600 }}>MERIDIAN</div>
       </div>
     );
   }

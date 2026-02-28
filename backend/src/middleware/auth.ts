@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { Investor } from '../models/Investor';
+import { prisma } from '../db';
 
 export interface AuthRequest extends Request {
     investor?: {
@@ -25,7 +25,10 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; email: string; role: string };
 
         // Verify investor still exists
-        const investor = await Investor.findById(decoded.id).select('_id email role');
+        const investor = await prisma.investor.findUnique({
+            where: { id: decoded.id },
+            select: { id: true, email: true, role: true }
+        });
         if (!investor) {
             res.status(401).json({
                 success: false,

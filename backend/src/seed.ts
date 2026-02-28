@@ -1,18 +1,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
-import { connectDB } from './db';
-import { Investor } from './models/Investor';
-import { Startup } from './models/Startup';
-import { Cashflow } from './models/Cashflow';
-import { MonthlyUpdate } from './models/MonthlyUpdate';
-import { DocumentModel } from './models/Document';
-import { AlertConfiguration } from './models/AlertConfiguration';
-import { Alert } from './models/Alert';
-import { DilutionEvent } from './models/DilutionEvent';
-import { AuditLog } from './models/AuditLog';
+import { prisma, connectDB } from './db';
 import { calculateRunway } from './services/financials.service';
 
 const SALT_ROUNDS = 12;
@@ -39,42 +29,44 @@ async function seed() {
     }
 
     await connectDB();
-    console.log('Connected to MongoDB. Clearing existing data...');
+    console.log('Connected to Database. Clearing existing data...');
 
-    // Wipe all collections
-    await Promise.all([
-        Investor.deleteMany({}),
-        Startup.deleteMany({}),
-        Cashflow.deleteMany({}),
-        MonthlyUpdate.deleteMany({}),
-        DocumentModel.deleteMany({}),
-        AlertConfiguration.deleteMany({}),
-        Alert.deleteMany({}),
-        DilutionEvent.deleteMany({}),
-        AuditLog.deleteMany({}),
-    ]);
+    // Wipe all tables in order of dependency
+    await prisma.auditLog.deleteMany({});
+    await prisma.alert.deleteMany({});
+    await prisma.alertConfiguration.deleteMany({});
+    await prisma.document.deleteMany({});
+    await prisma.monthlyUpdate.deleteMany({});
+    await prisma.dilutionEvent.deleteMany({});
+    await prisma.cashflow.deleteMany({});
+    await prisma.startup.deleteMany({});
+    await prisma.investor.deleteMany({});
+
+    console.log('✅ All existing data cleared.');
 
     // 1. Create demo investor
     const passwordHash = await bcrypt.hash('Demo@2024', SALT_ROUNDS);
-    const investor = await Investor.create({
-        name: 'Arjun Mehta',
-        email: 'investor@portfolioos.com',
-        passwordHash,
-        role: 'investor',
-        subscriptionTier: 'solo',
-        twoFactorEnabled: false,
+    const investor = await prisma.investor.create({
+        data: {
+            name: 'Arjun Mehta',
+            email: 'investor@portfolioos.com',
+            passwordHash,
+            role: 'investor',
+            subscriptionTier: 'solo',
+            twoFactorEnabled: false,
+        }
     });
     console.log('✅ Demo investor created: investor@portfolioos.com / Demo@2024');
 
-    const investorId = investor._id;
+    const investorId = investor.id;
 
     // 2. Create 5 startup investments
     const startupsData = [
         {
             name: 'Finly',
             sector: 'FinTech',
-            stage: 'Series A' as const,
-            status: 'active' as const,
+            stage: 'Series A',
+            status: 'active',
             invested: lakhsToPaise(50),
             entryValuation: lakhsToPaise(80),
             currentValuation: croresToPaise(2.2),
@@ -88,8 +80,8 @@ async function seed() {
         {
             name: 'HealthNode',
             sector: 'HealthTech',
-            stage: 'Seed' as const,
-            status: 'active' as const,
+            stage: 'Seed',
+            status: 'active',
             invested: lakhsToPaise(30),
             entryValuation: croresToPaise(3),
             currentValuation: lakhsToPaise(95),
@@ -103,8 +95,8 @@ async function seed() {
         {
             name: 'EduStack',
             sector: 'EdTech',
-            stage: 'Pre-Seed' as const,
-            status: 'active' as const,
+            stage: 'Pre-Seed',
+            status: 'active',
             invested: lakhsToPaise(15),
             entryValuation: croresToPaise(1.5),
             currentValuation: croresToPaise(1.2),
@@ -117,8 +109,8 @@ async function seed() {
         {
             name: 'GreenLoop',
             sector: 'CleanTech',
-            stage: 'Seed' as const,
-            status: 'exited' as const,
+            stage: 'Seed',
+            status: 'exited',
             invested: lakhsToPaise(20),
             entryValuation: croresToPaise(2),
             currentValuation: croresToPaise(2),
@@ -131,8 +123,8 @@ async function seed() {
         {
             name: 'CropMind',
             sector: 'AgriTech',
-            stage: 'Pre-Seed' as const,
-            status: 'active' as const,
+            stage: 'Pre-Seed',
+            status: 'active',
             invested: lakhsToPaise(10),
             entryValuation: croresToPaise(1),
             currentValuation: lakhsToPaise(95),
@@ -147,36 +139,40 @@ async function seed() {
 
     const startups = [];
     for (const sd of startupsData) {
-        const startup = await Startup.create({
-            investorId,
-            name: sd.name,
-            sector: sd.sector,
-            stage: sd.stage,
-            status: sd.status,
-            entryValuation: sd.entryValuation,
-            currentValuation: sd.currentValuation,
-            equityPercent: sd.equityPercent,
-            currentEquityPercent: sd.equityPercent,
-            investmentDate: sd.investmentDate,
-            description: sd.description,
-            website: sd.website,
-            founderName: sd.founderName,
-            founderEmail: sd.founderEmail,
+        const startup = await prisma.startup.create({
+            data: {
+                investorId,
+                name: sd.name,
+                sector: sd.sector,
+                stage: sd.stage,
+                status: sd.status,
+                entryValuation: sd.entryValuation,
+                currentValuation: sd.currentValuation,
+                equityPercent: sd.equityPercent,
+                currentEquityPercent: sd.equityPercent,
+                investmentDate: sd.investmentDate,
+                description: sd.description,
+                website: sd.website,
+                founderName: sd.founderName,
+                founderEmail: sd.founderEmail,
+            }
         });
 
         // Create initial investment cashflow
-        await Cashflow.create({
-            investorId,
-            startupId: startup._id,
-            amount: -sd.invested,
-            date: sd.investmentDate,
-            type: 'investment',
-            roundName: 'Initial Investment',
-            valuationAtTime: sd.entryValuation,
-            equityAcquired: sd.equityPercent,
-            currency: 'INR',
-            notes: `Initial investment in ${sd.name}`,
-            createdBy: investorId,
+        await prisma.cashflow.create({
+            data: {
+                investorId,
+                startupId: startup.id,
+                amount: -sd.invested,
+                date: sd.investmentDate,
+                type: 'investment',
+                roundName: 'Initial Investment',
+                valuationAtTime: sd.entryValuation,
+                equityAcquired: sd.equityPercent,
+                currency: 'INR',
+                notes: `Initial investment in ${sd.name}`,
+                createdBy: investorId,
+            }
         });
 
         startups.push(startup);
@@ -185,16 +181,18 @@ async function seed() {
 
     // 3. Create exit cashflow for GreenLoop
     const greenLoop = startups[3];
-    await Cashflow.create({
-        investorId,
-        startupId: greenLoop._id,
-        amount: lakhsToPaise(58),
-        date: new Date('2024-08-15'),
-        type: 'exit',
-        roundName: 'Acquisition by WasteWorks',
-        currency: 'INR',
-        notes: 'Exited via acquisition',
-        createdBy: investorId,
+    await prisma.cashflow.create({
+        data: {
+            investorId,
+            startupId: greenLoop.id,
+            amount: lakhsToPaise(58),
+            date: new Date('2024-08-15'),
+            type: 'exit',
+            roundName: 'Acquisition by WasteWorks',
+            currency: 'INR',
+            notes: 'Exited via acquisition',
+            createdBy: investorId,
+        }
     });
     console.log('✅ Created exit cashflow for GreenLoop');
 
@@ -215,7 +213,6 @@ async function seed() {
                 baseCash = lakhsToPaise(45);
                 break;
             case 'HealthNode':
-                // Low cash balance to trigger RUNWAY_WARNING
                 baseRevenue = lakhsToPaise(3);
                 baseBurn = lakhsToPaise(5);
                 baseCash = lakhsToPaise(12);
@@ -242,43 +239,48 @@ async function seed() {
             const cashBalance = Math.round(baseCash - (burnRate * i));
             const runway = calculateRunway(cashBalance, burnRate);
 
-            await MonthlyUpdate.create({
-                startupId: startup._id,
-                submittedBy: investorId,
-                month: months[i],
-                revenue,
-                burnRate,
-                cashBalance,
-                runwayMonths: runway,
+            await prisma.monthlyUpdate.create({
+                data: {
+                    startupId: startup.id,
+                    submittedBy: investorId,
+                    month: months[i],
+                    revenue,
+                    burnRate,
+                    cashBalance,
+                    runwayMonths: runway,
+                }
             });
         }
         console.log(`✅ Created 3 monthly updates for ${startup.name}`);
     }
 
     // 5. Create AlertConfiguration with defaults
-    await AlertConfiguration.create({ investorId });
+    await prisma.alertConfiguration.create({ data: { investorId } });
     console.log('✅ Created default alert configuration');
 
     // 6. Trigger alerts — HealthNode should have RUNWAY_WARNING
-    // HealthNode: cash = 12L - (5L * 2) = 2L, burn = 5L → runway = 0.4 months → RUNWAY_CRITICAL
     const healthNode = startups[1];
-    await Alert.create({
-        investorId,
-        startupId: healthNode._id,
-        alertType: 'RUNWAY_CRITICAL',
-        severity: 'RED',
-        message: `HealthNode: Critical — runway is only 0.4 months`,
-        isRead: false,
-        triggeredAt: new Date(),
+    await prisma.alert.create({
+        data: {
+            investorId,
+            startupId: healthNode.id,
+            alertType: 'RUNWAY_CRITICAL',
+            severity: 'RED',
+            message: `HealthNode: Critical — runway is only 0.4 months`,
+            isRead: false,
+            triggeredAt: new Date(),
+        }
     });
-    await Alert.create({
-        investorId,
-        startupId: healthNode._id,
-        alertType: 'RUNWAY_WARNING',
-        severity: 'YELLOW',
-        message: `HealthNode: Runway dropping — 0.4 months remaining`,
-        isRead: false,
-        triggeredAt: new Date(),
+    await prisma.alert.create({
+        data: {
+            investorId,
+            startupId: healthNode.id,
+            alertType: 'RUNWAY_WARNING',
+            severity: 'YELLOW',
+            message: `HealthNode: Runway dropping — 0.4 months remaining`,
+            isRead: false,
+            triggeredAt: new Date(),
+        }
     });
     console.log('✅ Created RUNWAY_WARNING and RUNWAY_CRITICAL alerts for HealthNode');
 
@@ -288,16 +290,18 @@ async function seed() {
         const startup = startups[i];
         const numDocs = i < 2 ? 2 : 1;
         for (let j = 0; j < numDocs; j++) {
-            await DocumentModel.create({
-                startupId: startup._id,
-                investorId,
-                fileName: `${startup.name.toLowerCase()}_${docTypes[j % docTypes.length]}.pdf`,
-                fileKey: `${startup._id}/${docTypes[j % docTypes.length]}_${Date.now()}.pdf`,
-                fileSizeBytes: Math.round(Math.random() * 500000 + 50000),
-                mimeType: 'application/pdf',
-                documentType: docTypes[j % docTypes.length],
-                description: `${docTypes[j % docTypes.length].replace('_', ' ')} for ${startup.name}`,
-                uploadedBy: investorId,
+            await prisma.document.create({
+                data: {
+                    startupId: startup.id,
+                    investorId,
+                    fileName: `${startup.name.toLowerCase()}_${docTypes[j % docTypes.length]}.pdf`,
+                    fileKey: `${startup.id}/${docTypes[j % docTypes.length]}_${Date.now()}.pdf`,
+                    fileSizeBytes: Math.round(Math.random() * 500000 + 50000),
+                    mimeType: 'application/pdf',
+                    documentType: docTypes[j % docTypes.length],
+                    description: `${docTypes[j % docTypes.length].replace('_', ' ')} for ${startup.name}`,
+                    uploadedBy: investorId,
+                }
             });
         }
         console.log(`✅ Created ${numDocs} document(s) for ${startup.name}`);
@@ -307,7 +311,7 @@ async function seed() {
     console.log('📧 Login: investor@portfolioos.com');
     console.log('🔑 Password: Demo@2024\n');
 
-    await mongoose.disconnect();
+    await prisma.$disconnect();
     process.exit(0);
 }
 
