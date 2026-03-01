@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import * as authService from '../services/auth.service';
-import { loginSchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema } from '../validators/auth.validators';
+import { loginSchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema, registerSchema } from '../validators/auth.validators';
 import { ZodError } from 'zod';
 
 function formatZodError(error: ZodError) {
@@ -11,6 +11,38 @@ function formatZodError(error: ZodError) {
         fields[path] = err.message;
     });
     return fields;
+}
+
+export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const parsed = registerSchema.safeParse(req.body);
+        if (!parsed.success) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: 'Invalid input', fields: formatZodError(parsed.error) }
+            });
+            return;
+        }
+
+        const result = await authService.registerInvestor(parsed.data.name, parsed.data.email, parsed.data.password);
+
+        res.cookie('refreshToken', result.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        res.status(201).json({
+            success: true,
+            data: {
+                accessToken: result.accessToken,
+                investor: result.investor,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
 }
 
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {

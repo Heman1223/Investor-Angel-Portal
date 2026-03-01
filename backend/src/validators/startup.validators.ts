@@ -12,6 +12,7 @@ export const createStartupSchema = z.object({
     website: z.string().url().optional().or(z.literal('')),
     founderName: z.string().optional(),
     founderEmail: z.string().email().optional().or(z.literal('')),
+    coInvestors: z.string().optional(),
 });
 
 export const updateStartupSchema = z.object({
@@ -22,6 +23,7 @@ export const updateStartupSchema = z.object({
     website: z.string().url().optional().or(z.literal('')),
     founderName: z.string().optional(),
     founderEmail: z.string().email().optional().or(z.literal('')),
+    coInvestors: z.string().optional(),
 });
 
 export const exitStartupSchema = z.object({
@@ -49,6 +51,10 @@ export const monthlyUpdateSchema = z.object({
     cashBalance: z.number(),
     valuationUpdate: z.number().positive().optional(),
     notes: z.string().max(1000).optional(),
+    headcount: z.number().int().min(0).optional(),
+    keyWins: z.string().max(2000).optional(),
+    keyChallenges: z.string().max(2000).optional(),
+    helpNeeded: z.string().max(2000).optional(),
 });
 
 export const alertConfigSchema = z.object({

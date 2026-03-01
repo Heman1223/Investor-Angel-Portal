@@ -54,6 +54,10 @@ export async function createUpdate(
         cashBalance: number;
         valuationUpdate?: number;
         notes?: string;
+        headcount?: number;
+        keyWins?: string;
+        keyChallenges?: string;
+        helpNeeded?: string;
     }
 ) {
     const startup = await prisma.startup.findFirst({
@@ -83,6 +87,10 @@ export async function createUpdate(
                 runwayMonths,
                 valuationUpdate: data.valuationUpdate ? Math.round(data.valuationUpdate * 100) : null,
                 notes: data.notes,
+                headcount: data.headcount ?? null,
+                keyWins: data.keyWins,
+                keyChallenges: data.keyChallenges,
+                helpNeeded: data.helpNeeded,
             }
         });
 

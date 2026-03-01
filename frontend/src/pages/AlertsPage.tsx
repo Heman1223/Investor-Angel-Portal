@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, CheckCheck, AlertTriangle } from 'lucide-react';
+import { Check, CheckCheck, AlertTriangle, Shield } from 'lucide-react';
 import { alertsAPI } from '../services/api';
 import { formatDate } from '../utils/formatters';
 import toast from 'react-hot-toast';
 
 export default function AlertsPage() {
     const queryClient = useQueryClient();
+    const [filter, setFilter] = useState<'all' | 'unread' | 'resolved'>('all');
 
     const { data: alerts, isLoading } = useQuery({
         queryKey: ['alerts'],
@@ -20,6 +22,7 @@ export default function AlertsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['alerts'] });
             queryClient.invalidateQueries({ queryKey: ['unreadAlerts'] });
+            toast.success('Alert marked as read');
         },
     });
 
@@ -33,6 +36,13 @@ export default function AlertsPage() {
     });
 
     const unreadCount = alerts?.filter((a: any) => !a.isRead).length || 0;
+    const resolvedCount = alerts?.filter((a: any) => a.isRead).length || 0;
+
+    const filteredAlerts = alerts?.filter((a: any) => {
+        if (filter === 'unread') return !a.isRead;
+        if (filter === 'resolved') return a.isRead;
+        return true;
+    }) || [];
 
     if (isLoading) {
         return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="card animate-shimmer" style={{ height: 64 }} />)}</div>;
@@ -66,15 +76,38 @@ export default function AlertsPage() {
                 )}
             </div>
 
+            {/* Filter Tabs */}
+            <div style={{ display: 'flex', gap: 8 }}>
+                {(['all', 'unread', 'resolved'] as const).map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setFilter(tab)}
+                        style={{
+                            padding: '6px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
+                            background: filter === tab ? 'rgba(197,164,84,0.15)' : 'transparent',
+                            color: filter === tab ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                            transition: 'all 0.2s',
+                        }}
+                    >
+                        {tab === 'all' ? `All (${alerts?.length || 0})` : tab === 'unread' ? `Unread (${unreadCount})` : `Resolved (${resolvedCount})`}
+                    </button>
+                ))}
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {alerts.map((alert: any) => (
+                {filteredAlerts.length === 0 ? (
+                    <div className="card text-center" style={{ padding: '40px 20px', color: 'var(--color-text-muted)' }}>
+                        <Shield size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                        <p>No {filter !== 'all' ? filter : ''} alerts</p>
+                    </div>
+                ) : filteredAlerts.map((alert: any) => (
                     <div
                         key={alert._id}
                         className="card"
                         style={{
                             display: 'flex', alignItems: 'flex-start', gap: 16,
                             borderLeft: `3px solid ${alert.severity === 'RED' ? 'var(--color-red)' : 'var(--color-yellow)'}`,
-                            opacity: alert.isRead ? 0.5 : 1,
+                            opacity: alert.isRead ? 0.55 : 1,
                         }}
                     >
                         <div
@@ -94,18 +127,23 @@ export default function AlertsPage() {
                                 <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
                                     {alert.alertType.replace(/_/g, ' ')}
                                 </span>
+                                {alert.isRead && (
+                                    <span className="badge badge-green" style={{ fontSize: 10, padding: '1px 6px' }}>Resolved</span>
+                                )}
                             </div>
                             <p style={{ fontSize: 14, color: 'var(--color-text-primary)' }}>{alert.message}</p>
                             <p style={{ fontSize: 12, marginTop: 4, color: 'var(--color-text-muted)' }}>{formatDate(alert.triggeredAt)}</p>
                         </div>
                         {!alert.isRead && (
-                            <button
-                                onClick={() => markReadMutation.mutate(alert._id)}
-                                className="btn btn-secondary btn-sm"
-                                style={{ flexShrink: 0 }}
-                            >
-                                <Check size={14} /> Read
-                            </button>
+                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                <button
+                                    onClick={() => markReadMutation.mutate(alert._id)}
+                                    className="btn btn-secondary btn-sm"
+                                    title="Mark as read"
+                                >
+                                    <Check size={14} /> Read
+                                </button>
+                            </div>
                         )}
                     </div>
                 ))}

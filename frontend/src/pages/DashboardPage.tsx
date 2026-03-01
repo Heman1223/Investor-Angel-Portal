@@ -8,7 +8,8 @@ import {
 import {
     AlertTriangle, TrendingUp, Briefcase, DollarSign,
     Target, Plus, ArrowUpRight, ArrowDownRight, Activity,
-    CheckCircle2, Rocket, ChevronRight
+    CheckCircle2, Rocket, ChevronRight, Award, AlertOctagon,
+    FileText, Clock
 } from 'lucide-react';
 import { dashboardAPI, alertsAPI } from '../services/api';
 import { formatCurrencyCompact, formatMOIC, formatPercent, paiseToRupees } from '../utils/formatters';
@@ -284,6 +285,106 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
+                {/* ── BEST/WORST + ACTIVITY ROW ─────────────── */}
+                <div className="d-insights-row" style={{ animation: 'd-fadein 0.6s ease 0.25s both' }}>
+                    {/* Best Performer */}
+                    {d.bestPerformer && (
+                        <div className="d-performer-card d-performer-best" onClick={() => navigate(`/portfolio/${d.bestPerformer.startupId}`)}>
+                            <div className="d-perf-head">
+                                <div className="d-perf-icon" style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)' }}>
+                                    <Award size={16} color="#4ADE80" strokeWidth={2} />
+                                </div>
+                                <span className="d-perf-label">Best Performer</span>
+                            </div>
+                            <h4 className="d-perf-name">{d.bestPerformer.name}</h4>
+                            <p className="d-perf-sector">{d.bestPerformer.sector}</p>
+                            <div className="d-perf-metrics">
+                                <div className="d-perf-metric">
+                                    <span className="d-perf-metric-lbl">MOIC</span>
+                                    <span className="d-perf-metric-val" style={{ color: '#4ADE80' }}>
+                                        <ArrowUpRight size={12} strokeWidth={2.5} />
+                                        {formatMOIC(d.bestPerformer.moic)}
+                                    </span>
+                                </div>
+                                <div className="d-perf-metric">
+                                    <span className="d-perf-metric-lbl">Value</span>
+                                    <span className="d-perf-metric-val">{formatCurrencyCompact(paiseToRupees(d.bestPerformer.currentValue))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Worst Performer */}
+                    {d.worstPerformer && (
+                        <div className="d-performer-card d-performer-worst" onClick={() => navigate(`/portfolio/${d.worstPerformer.startupId}`)}>
+                            <div className="d-perf-head">
+                                <div className="d-perf-icon" style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}>
+                                    <AlertOctagon size={16} color="#F87171" strokeWidth={2} />
+                                </div>
+                                <span className="d-perf-label">Needs Attention</span>
+                            </div>
+                            <h4 className="d-perf-name">{d.worstPerformer.name}</h4>
+                            <p className="d-perf-sector">{d.worstPerformer.sector}</p>
+                            <div className="d-perf-metrics">
+                                <div className="d-perf-metric">
+                                    <span className="d-perf-metric-lbl">MOIC</span>
+                                    <span className="d-perf-metric-val" style={{ color: d.worstPerformer.moic < 1 ? '#F87171' : '#FBBF24' }}>
+                                        {d.worstPerformer.moic < 1 && <ArrowDownRight size={12} strokeWidth={2.5} />}
+                                        {formatMOIC(d.worstPerformer.moic)}
+                                    </span>
+                                </div>
+                                <div className="d-perf-metric">
+                                    <span className="d-perf-metric-lbl">Invested</span>
+                                    <span className="d-perf-metric-val">{formatCurrencyCompact(paiseToRupees(d.worstPerformer.invested))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Recent Activity */}
+                    <div className="d-card d-activity-card">
+                        <div className="d-card-head" style={{ padding: '18px 22px 14px' }}>
+                            <div>
+                                <h3 className="d-card-title">Recent Activity</h3>
+                                <p className="d-card-sub">Latest portfolio events</p>
+                            </div>
+                        </div>
+                        <div className="d-activity-list">
+                            {d.recentActivity && d.recentActivity.length > 0 ? (
+                                d.recentActivity.map((a: { type: string; date: string; description: string; startupName: string }, i: number) => {
+                                    const iconMap: Record<string, { icon: typeof Activity; color: string; bg: string }> = {
+                                        update: { icon: FileText, color: '#60A5FA', bg: 'rgba(96,165,250,0.1)' },
+                                        investment: { icon: DollarSign, color: '#C5A454', bg: 'rgba(197,164,84,0.1)' },
+                                        exit: { icon: CheckCircle2, color: '#4ADE80', bg: 'rgba(74,222,128,0.1)' },
+                                        document: { icon: FileText, color: '#A78BFA', bg: 'rgba(167,139,250,0.1)' },
+                                    };
+                                    const config = iconMap[a.type] || iconMap.update;
+                                    const Icon = config.icon;
+                                    const timeAgo = getTimeAgo(new Date(a.date));
+                                    return (
+                                        <div key={i} className="d-activity-item">
+                                            <div className="d-activity-icon" style={{ background: config.bg }}>
+                                                <Icon size={13} color={config.color} strokeWidth={2} />
+                                            </div>
+                                            <div className="d-activity-body">
+                                                <p className="d-activity-desc">
+                                                    <strong>{a.startupName}</strong> — {a.description}
+                                                </p>
+                                                <p className="d-activity-time"><Clock size={10} strokeWidth={2} /> {timeAgo}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="d-activity-empty">
+                                    <Activity size={20} color="#5A6380" strokeWidth={1.5} />
+                                    <p>No recent activity</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 {/* ── BOTTOM ROW ──────────────────────────────── */}
                 <div className="d-bottom-row" style={{ animation: 'd-fadein 0.6s ease 0.3s both' }}>
                     {/* Risk Alerts */}
@@ -397,6 +498,20 @@ export default function DashboardPage() {
             </div>
         </>
     );
+}
+
+function getTimeAgo(date: Date): string {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    return `${months}mo ago`;
 }
 
 // ── All styles ────────────────────────────────────────────────────────────────
@@ -514,4 +629,35 @@ const DASHBOARD_CSS = `
 .d-empty-icon { width:72px; height:72px; border-radius:18px; background:rgba(197,164,84,0.08); border:2px dashed rgba(197,164,84,0.3); display:flex; align-items:center; justify-content:center; margin-bottom:20px; }
 .d-empty-title { font-family:var(--font-display, 'Syne', sans-serif); font-size:24px; font-weight:700; color:var(--cream, #EDE5CC); margin-bottom:8px; }
 .d-empty-sub { font-size:15px; color:#5A6380; margin-bottom:24px; max-width:340px; line-height:1.6; }
+
+/* INSIGHTS ROW (best/worst + activity) */
+.d-insights-row { display:grid; grid-template-columns:1fr 1fr 2fr; gap:16px; }
+@media (max-width:1200px) { .d-insights-row { grid-template-columns:1fr 1fr; } }
+@media (max-width:700px) { .d-insights-row { grid-template-columns:1fr; } }
+
+.d-performer-card {
+  background:rgba(15,24,41,0.8); border:1px solid rgba(197,164,84,0.1); border-radius:14px; padding:20px;
+  cursor:pointer; transition:all 0.25s; backdrop-filter:blur(8px);
+}
+.d-performer-card:hover { border-color:rgba(197,164,84,0.25); transform:translateY(-2px); box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+.d-perf-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.d-perf-icon { width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.d-perf-label { font-family:var(--font-mono, 'IBM Plex Mono', monospace); font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#5A6380; }
+.d-perf-name { font-family:var(--font-body, 'Inter', sans-serif); font-size:17px; font-weight:700; color:var(--cream, #EDE5CC); margin-bottom:3px; }
+.d-perf-sector { font-size:12px; color:#5A6380; margin-bottom:14px; }
+.d-perf-metrics { display:flex; gap:20px; }
+.d-perf-metric { display:flex; flex-direction:column; gap:3px; }
+.d-perf-metric-lbl { font-family:var(--font-mono, 'IBM Plex Mono', monospace); font-size:9px; font-weight:500; color:#4A5368; letter-spacing:0.08em; text-transform:uppercase; }
+.d-perf-metric-val { font-size:15px; font-weight:700; color:var(--cream, #EDE5CC); display:flex; align-items:center; gap:3px; }
+
+.d-activity-card { display:flex; flex-direction:column; }
+.d-activity-list { display:flex; flex-direction:column; padding:0 18px 14px; flex:1; }
+.d-activity-item { display:flex; align-items:flex-start; gap:12px; padding:11px 4px; border-bottom:1px solid rgba(197,164,84,0.06); }
+.d-activity-item:last-child { border-bottom:none; }
+.d-activity-icon { width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.d-activity-desc { font-size:13px; color:var(--cream, #EDE5CC); line-height:1.5; }
+.d-activity-desc strong { font-weight:600; }
+.d-activity-time { font-size:11px; color:#4A5368; margin-top:3px; display:flex; align-items:center; gap:4px; }
+.d-activity-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:30px 0; }
+.d-activity-empty p { font-size:13px; color:#5A6380; }
 `;

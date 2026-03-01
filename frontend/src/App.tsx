@@ -9,6 +9,8 @@ import StartupDetailPage from './pages/StartupDetailPage';
 import AlertsPage from './pages/AlertsPage';
 import DocumentsPage from './pages/DocumentsPage';
 import SettingsPage from './pages/SettingsPage';
+import ComparisonPage from './pages/ComparisonPage';
+import ReportsPage from './pages/ReportsPage';
 import './index.css';
 import MainLayout from './components/layout/Layouts';
 
@@ -47,6 +49,8 @@ function AppRoutes() {
         <Route path="alerts" element={<AlertsPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="compare" element={<ComparisonPage />} />
+        <Route path="reports" element={<ReportsPage />} />
       </Route>
     </Routes>
   );

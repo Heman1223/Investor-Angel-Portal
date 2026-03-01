@@ -49,6 +49,8 @@ model Startup {
   website              String?
   founderName          String?
   founderEmail         String?
+  notes                Json?     // Array of { text: string, createdAt: string }
+  coInvestors          String?   // Comma-separated co-investor names
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
@@ -72,6 +74,10 @@ model MonthlyUpdate {
   runwayMonths    Float?
   valuationUpdate Float?
   notes           String?
+  headcount       Int?
+  keyWins         String?
+  keyChallenges   String?
+  helpNeeded      String?
   createdAt       DateTime @default(now())
 
   @@unique([startupId, month])

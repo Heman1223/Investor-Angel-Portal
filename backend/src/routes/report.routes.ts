@@ -1,30 +1,37 @@
 import { Router, Response, NextFunction } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { generatePortfolioPDF, generateStartupPDF } from '../services/report.service';
+import { logger } from '../utils/logger';
 
 const router = Router();
 router.use(authMiddleware);
 
-// PDF report generation — placeholder for V1
-// In production, this would use Puppeteer for server-side PDF generation
+// Portfolio PDF
 router.post('/portfolio', async (req: AuthRequest, res: Response, _next: NextFunction): Promise<void> => {
-    res.json({
-        success: true,
-        data: { message: 'PDF report generation will be available in the next release.', jobId: null },
-    });
+    try {
+        const pdf = await generatePortfolioPDF(req.investor!.id);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename="portfolio-report.pdf"');
+        res.setHeader('Content-Length', pdf.length);
+        res.send(pdf);
+    } catch (err) {
+        logger.error('Portfolio PDF error:', err);
+        res.status(500).json({ success: false, error: { code: 'PDF_ERROR', message: 'Failed to generate portfolio report' } });
+    }
 });
 
-router.get('/:jobId', async (req: AuthRequest, res: Response, _next: NextFunction): Promise<void> => {
-    res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Report not found' },
-    });
-});
-
+// Startup PDF
 router.post('/startup/:id', async (req: AuthRequest, res: Response, _next: NextFunction): Promise<void> => {
-    res.json({
-        success: true,
-        data: { message: 'Startup PDF report generation will be available in the next release.', jobId: null },
-    });
+    try {
+        const pdf = await generateStartupPDF(req.investor!.id, req.params.id);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="startup-report-${req.params.id}.pdf"`);
+        res.setHeader('Content-Length', pdf.length);
+        res.send(pdf);
+    } catch (err) {
+        logger.error('Startup PDF error:', err);
+        res.status(500).json({ success: false, error: { code: 'PDF_ERROR', message: 'Failed to generate startup report' } });
+    }
 });
 
 export default router;

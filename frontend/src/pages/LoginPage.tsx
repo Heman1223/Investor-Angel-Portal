@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 // ── Investment Background ────────────────────────────────────
@@ -302,13 +303,294 @@ function Sparkline({ up }: { up: boolean }) {
   );
 }
 
-// ── Main ────────────────────────────────────────────────────
+// ── Forgot Password Flow ───────────────────────────────────────
+type ForgotStep = 'email' | 'token' | 'newPassword' | 'success';
+
+function ForgotPasswordCard({ onBack }: { onBack: () => void }) {
+  const [forgotStep, setForgotStep] = useState<ForgotStep>('email');
+  const [fpEmail, setFpEmail] = useState('');
+  const [fpToken, setFpToken] = useState('');
+  const [fpNewPassword, setFpNewPassword] = useState('');
+  const [fpConfirm, setFpConfirm] = useState('');
+  const [fpLoading, setFpLoading] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+
+  const handleForgotSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setFpLoading(true);
+    try {
+      if (forgotStep === 'email') {
+        await authAPI.forgotPassword(fpEmail);
+        toast.success('If an account exists, a reset token has been generated.');
+        setForgotStep('token');
+      } else if (forgotStep === 'token') {
+        if (!fpToken.trim()) { toast.error('Please enter the reset token'); setFpLoading(false); return; }
+        setForgotStep('newPassword');
+      } else if (forgotStep === 'newPassword') {
+        if (fpNewPassword.length < 8) { toast.error('Password must be at least 8 characters'); setFpLoading(false); return; }
+        if (fpNewPassword !== fpConfirm) { toast.error('Passwords do not match'); setFpLoading(false); return; }
+        await authAPI.resetPassword(fpEmail, fpToken, fpNewPassword);
+        toast.success('Password reset successfully!');
+        setForgotStep('success');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  const stepNumber = forgotStep === 'email' ? 1 : forgotStep === 'token' ? 2 : 3;
+  const stepLabels: Record<ForgotStep, string> = { email: 'Verify Email', token: 'Enter Token', newPassword: 'New Password', success: 'Done' };
+
+  if (forgotStep === 'success') {
+    return (
+      <>
+        <div className="mc-form-head">
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+          <h2 className="mc-form-title">Password<br /><span className="mc-form-title-gold">reset.</span></h2>
+          <p className="mc-form-sub">Your password has been updated. You can now log in with your new credentials.</p>
+        </div>
+        <button type="button" className="mc-submit" onClick={onBack}>
+          <span className="mc-btn-inner">
+            Back to Login
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+          </span>
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* Step indicator */}
+      <div className="mc-card-topbar">
+        <div className="mc-steps">
+          <div className={`mc-step ${stepNumber === 1 ? 'active' : stepNumber > 1 ? 'done' : ''}`}>
+            {stepNumber > 1 ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg> : '1'}
+          </div>
+          <div className="mc-step-connector" />
+          <div className={`mc-step ${stepNumber === 2 ? 'active' : stepNumber > 2 ? 'done' : ''}`}>
+            {stepNumber > 2 ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg> : '2'}
+          </div>
+          <div className="mc-step-connector" />
+          <div className={`mc-step ${stepNumber === 3 ? 'active' : ''}`}>3</div>
+          <span className="mc-step-label">{stepLabels[forgotStep]}</span>
+        </div>
+        <div className="mc-ssl">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+          Secure Reset
+        </div>
+      </div>
+
+      {/* Headline */}
+      <div className="mc-form-head">
+        <h2 className="mc-form-title">
+          {forgotStep === 'email' && <>Reset your<br /><span className="mc-form-title-gold">password.</span></>}
+          {forgotStep === 'token' && <>Enter reset<br /><span className="mc-form-title-gold">token.</span></>}
+          {forgotStep === 'newPassword' && <>Set a new<br /><span className="mc-form-title-gold">password.</span></>}
+        </h2>
+        <p className="mc-form-sub">
+          {forgotStep === 'email' && 'Enter the email associated with your account.'}
+          {forgotStep === 'token' && <span>Check your email <strong>{fpEmail}</strong> for the reset token.</span>}
+          {forgotStep === 'newPassword' && 'Choose a strong password, at least 8 characters.'}
+        </p>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleForgotSubmit} className="mc-form">
+        {forgotStep === 'email' && (
+          <div className="mc-field">
+            <label className="mc-label">Email Address</label>
+            <div className="mc-input-wrap">
+              <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+              <input type="email" className="mc-input" placeholder="partner@fund.com" value={fpEmail} onChange={e => setFpEmail(e.target.value)} required autoFocus />
+            </div>
+          </div>
+        )}
+        {forgotStep === 'token' && (
+          <div className="mc-field">
+            <label className="mc-label">Reset Token</label>
+            <div className="mc-input-wrap">
+              <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <input type="text" className="mc-input" placeholder="Paste reset token from email" value={fpToken} onChange={e => setFpToken(e.target.value)} required autoFocus />
+            </div>
+          </div>
+        )}
+        {forgotStep === 'newPassword' && (
+          <>
+            <div className="mc-field">
+              <label className="mc-label">New Password</label>
+              <div className="mc-input-wrap">
+                <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                <input type={showNewPw ? 'text' : 'password'} className="mc-input mc-input-pw" placeholder="Min. 8 characters" value={fpNewPassword} onChange={e => setFpNewPassword(e.target.value)} required autoFocus minLength={8} />
+                <button type="button" className="mc-eye" onClick={() => setShowNewPw(!showNewPw)}>
+                  {showNewPw
+                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>}
+                </button>
+              </div>
+            </div>
+            <div className="mc-field">
+              <label className="mc-label">Confirm Password</label>
+              <div className="mc-input-wrap">
+                <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <input type="password" className="mc-input" placeholder="Re-enter password" value={fpConfirm} onChange={e => setFpConfirm(e.target.value)} required />
+              </div>
+            </div>
+          </>
+        )}
+
+        <button type="submit" className="mc-submit" disabled={fpLoading}>
+          {fpLoading
+            ? <span className="mc-loading"><span className="mc-spinner" /> Processing…</span>
+            : <span className="mc-btn-inner">
+              {forgotStep === 'email' ? 'Send Reset Token' : forgotStep === 'token' ? 'Verify Token' : 'Reset Password'}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </span>}
+        </button>
+      </form>
+
+      <button className="mc-back" onClick={forgotStep === 'email' ? onBack : () => setForgotStep(forgotStep === 'newPassword' ? 'token' : 'email')}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+        {forgotStep === 'email' ? 'Back to login' : 'Go back'}
+      </button>
+    </>
+  );
+}
+
+// ── Signup Card ────────────────────────────────────────────────
+function SignupCard({ onBack, onSuccess }: { onBack: () => void; onSuccess: (accessToken: string, investor: any) => void }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSignup = async (e: FormEvent) => {
+    e.preventDefault();
+    if (password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    if (password !== confirmPw) { toast.error('Passwords do not match'); return; }
+    setLoading(true);
+    try {
+      const res = await authAPI.register(name, email, password);
+      toast.success('Account created! Welcome aboard.');
+      onSuccess(res.data.data.accessToken, res.data.data.investor);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || 'Registration failed. Please try again.');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <>
+      <div className="mc-card-topbar">
+        <div className="mc-steps">
+          <div className="mc-step active">✦</div>
+          <span className="mc-step-label">Create Account</span>
+        </div>
+        <div className="mc-ssl">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          256-bit SSL
+        </div>
+      </div>
+
+      <div className="mc-form-head">
+        <h2 className="mc-form-title">Create your<br /><span className="mc-form-title-gold">account.</span></h2>
+        <p className="mc-form-sub">Get started with your portfolio dashboard.</p>
+      </div>
+
+      <form onSubmit={handleSignup} className="mc-form">
+        <div className="mc-field">
+          <label className="mc-label">Full Name</label>
+          <div className="mc-input-wrap">
+            <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+            </svg>
+            <input type="text" className="mc-input" placeholder="Arjun Mehta" value={name} onChange={e => setName(e.target.value)} required autoFocus minLength={2} />
+          </div>
+        </div>
+
+        <div className="mc-field">
+          <label className="mc-label">Email Address</label>
+          <div className="mc-input-wrap">
+            <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+            <input type="email" className="mc-input" placeholder="partner@fund.com" value={email} onChange={e => setEmail(e.target.value)} required />
+          </div>
+        </div>
+
+        <div className="mc-field">
+          <label className="mc-label">Password</label>
+          <div className="mc-input-wrap">
+            <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <input type={showPw ? 'text' : 'password'} className="mc-input mc-input-pw" placeholder="Min. 8 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
+            <button type="button" className="mc-eye" onClick={() => setShowPw(!showPw)}>
+              {showPw
+                ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>}
+            </button>
+          </div>
+        </div>
+
+        <div className="mc-field">
+          <label className="mc-label">Confirm Password</label>
+          <div className="mc-input-wrap">
+            <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <input type="password" className="mc-input" placeholder="Re-enter password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} required />
+          </div>
+        </div>
+
+        <button type="submit" className="mc-submit" disabled={loading}>
+          {loading
+            ? <span className="mc-loading"><span className="mc-spinner" /> Creating account…</span>
+            : <span className="mc-btn-inner">
+              Create Account
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </span>}
+        </button>
+      </form>
+
+      <button className="mc-back" onClick={onBack}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+        Back to login
+      </button>
+    </>
+  );
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<'email' | 'password'>('email');
+  const [showForgot, setShowForgot] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -429,134 +711,151 @@ export default function LoginPage() {
         <div className="mc-right">
           <div className="mc-card anim-card">
 
-            {/* Card top bar */}
-            <div className="mc-card-topbar">
-              <div className="mc-steps">
-                <div className={`mc-step ${step === 'email' ? 'active' : 'done'}`}>
-                  {step === 'password' ? (
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            {showSignup ? (
+              <SignupCard
+                onBack={() => setShowSignup(false)}
+                onSuccess={(accessToken, investor) => {
+                  sessionStorage.setItem('accessToken', accessToken);
+                  login(investor.email, '').catch(() => {
+                    // Already registered, just navigate
+                    window.location.href = '/';
+                  });
+                }}
+              />
+            ) : showForgot ? (
+              <ForgotPasswordCard onBack={() => setShowForgot(false)} />
+            ) : (
+              <>
+                {/* Card top bar */}
+                <div className="mc-card-topbar">
+                  <div className="mc-steps">
+                    <div className={`mc-step ${step === 'email' ? 'active' : 'done'}`}>
+                      {step === 'password' ? (
+                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      ) : '1'}
+                    </div>
+                    <div className="mc-step-connector" />
+                    <div className={`mc-step ${step === 'password' ? 'active' : ''}`}>2</div>
+                    <span className="mc-step-label">
+                      {step === 'email' ? 'Identify' : 'Authenticate'}
+                    </span>
+                  </div>
+                  <div className="mc-ssl">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     </svg>
-                  ) : '1'}
-                </div>
-                <div className="mc-step-connector" />
-                <div className={`mc-step ${step === 'password' ? 'active' : ''}`}>2</div>
-                <span className="mc-step-label">
-                  {step === 'email' ? 'Identify' : 'Authenticate'}
-                </span>
-              </div>
-              <div className="mc-ssl">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                256-bit SSL
-              </div>
-            </div>
-
-            {/* Headline */}
-            <div className="mc-form-head">
-              <h2 className="mc-form-title">
-                {step === 'email' ? <>Sign in to your<br /><span className="mc-form-title-gold">portfolio.</span></> : <>Verify your<br /><span className="mc-form-title-gold">identity.</span></>}
-              </h2>
-              <p className="mc-form-sub">
-                {step === 'email'
-                  ? 'Authorized access only. All activity is logged.'
-                  : <span>Continuing as <strong>{email}</strong></span>}
-              </p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="mc-form">
-              {step === 'email' ? (
-                <div className="mc-field">
-                  <label className="mc-label">Email Address</label>
-                  <div className="mc-input-wrap">
-                    <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                      <polyline points="22,6 12,13 2,6" />
-                    </svg>
-                    <input
-                      type="email" className="mc-input" placeholder="partner@fund.com"
-                      value={email} onChange={e => setEmail(e.target.value)}
-                      required autoFocus
-                    />
+                    256-bit SSL
                   </div>
                 </div>
-              ) : (
-                <div className="mc-field">
-                  <div className="mc-label-row">
-                    <label className="mc-label">Password</label>
-                    <a href="#" className="mc-forgot">Forgot password?</a>
-                  </div>
-                  <div className="mc-input-wrap">
-                    <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <input
-                      type={showPassword ? 'text' : 'password'} className="mc-input mc-input-pw"
-                      placeholder="Enter your passphrase"
-                      value={password} onChange={e => setPassword(e.target.value)}
-                      required autoFocus
-                    />
-                    <button type="button" className="mc-eye" onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword
-                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>}
-                    </button>
-                  </div>
+
+                {/* Headline */}
+                <div className="mc-form-head">
+                  <h2 className="mc-form-title">
+                    {step === 'email' ? <>Sign in to your<br /><span className="mc-form-title-gold">portfolio.</span></> : <>Verify your<br /><span className="mc-form-title-gold">identity.</span></>}
+                  </h2>
+                  <p className="mc-form-sub">
+                    {step === 'email'
+                      ? 'Authorized access only. All activity is logged.'
+                      : <span>Continuing as <strong>{email}</strong></span>}
+                  </p>
                 </div>
-              )}
 
-              <button type="submit" className="mc-submit" disabled={isLoading}>
-                {isLoading
-                  ? <span className="mc-loading"><span className="mc-spinner" /> Authenticating…</span>
-                  : <span className="mc-btn-inner">
-                    {step === 'email' ? 'Continue' : 'Open Portfolio'}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M5 12h14M12 5l7 7-7 7" />
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="mc-form">
+                  {step === 'email' ? (
+                    <div className="mc-field">
+                      <label className="mc-label">Email Address</label>
+                      <div className="mc-input-wrap">
+                        <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                          <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                        <input
+                          type="email" className="mc-input" placeholder="partner@fund.com"
+                          value={email} onChange={e => setEmail(e.target.value)}
+                          required autoFocus
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mc-field">
+                      <div className="mc-label-row">
+                        <label className="mc-label">Password</label>
+                        <button type="button" className="mc-forgot" onClick={(e) => { e.preventDefault(); setShowForgot(true); }}>Forgot password?</button>
+                      </div>
+                      <div className="mc-input-wrap">
+                        <svg className="mc-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input
+                          type={showPassword ? 'text' : 'password'} className="mc-input mc-input-pw"
+                          placeholder="Enter your passphrase"
+                          value={password} onChange={e => setPassword(e.target.value)}
+                          required autoFocus
+                        />
+                        <button type="button" className="mc-eye" onClick={() => setShowPassword(!showPassword)}>
+                          {showPassword
+                            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                            : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <button type="submit" className="mc-submit" disabled={isLoading}>
+                    {isLoading
+                      ? <span className="mc-loading"><span className="mc-spinner" /> Authenticating…</span>
+                      : <span className="mc-btn-inner">
+                        {step === 'email' ? 'Continue' : 'Open Portfolio'}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M5 12h14M12 5l7 7-7 7" />
+                        </svg>
+                      </span>}
+                  </button>
+                </form>
+
+                {step === 'password' && (
+                  <button className="mc-back" onClick={() => setStep('email')}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                    Use different email
+                  </button>
+                )}
+
+                {/* Divider */}
+                <div className="mc-divider"><div className="mc-div-line" /><span>or continue with</span><div className="mc-div-line" /></div>
+
+                {/* SSO */}
+                <div className="mc-sso">
+                  <button className="mc-sso-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                     </svg>
-                  </span>}
-              </button>
-            </form>
+                    Google Workspace
+                  </button>
+                  <button className="mc-sso-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="#0072C6">
+                      <path d="M21.4 0H2.6C1.2 0 0 1.2 0 2.6v18.8C0 22.8 1.2 24 2.6 24h18.8c1.4 0 2.6-1.2 2.6-2.6V2.6C24 1.2 22.8 0 21.4 0zM7.1 20.5H3.7V9h3.4v11.5zm-1.7-13C4.3 7.5 3.4 6.6 3.4 5.5s.9-2 2-2 2 .9 2 2-.9 2-2 2zm15.1 13h-3.4v-5.6c0-1.3 0-3-1.8-3s-2.1 1.5-2.1 3v5.6H9.8V9h3.3v1.6h.1c.5-.9 1.6-1.8 3.3-1.8 3.5 0 4.1 2.3 4.1 5.3v6.4z" />
+                    </svg>
+                    Microsoft Azure
+                  </button>
+                </div>
 
-            {step === 'password' && (
-              <button className="mc-back" onClick={() => setStep('email')}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-                Use different email
-              </button>
+                {/* Badges */}
+                <div className="mc-badges">
+                  {['SOC 2 Type II', 'AES-256', 'SEBI Compliant', '2FA Required'].map(b => (
+                    <span key={b} className="mc-badge">{b}</span>
+                  ))}
+                </div>
+
+                <p className="mc-access">Don't have access? <a href="#" onClick={(e) => { e.preventDefault(); setShowSignup(true); }}>Create an account →</a></p>
+              </>
             )}
-
-            {/* Divider */}
-            <div className="mc-divider"><div className="mc-div-line" /><span>or continue with</span><div className="mc-div-line" /></div>
-
-            {/* SSO */}
-            <div className="mc-sso">
-              <button className="mc-sso-btn">
-                <svg width="15" height="15" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                </svg>
-                Google Workspace
-              </button>
-              <button className="mc-sso-btn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="#0072C6">
-                  <path d="M21.4 0H2.6C1.2 0 0 1.2 0 2.6v18.8C0 22.8 1.2 24 2.6 24h18.8c1.4 0 2.6-1.2 2.6-2.6V2.6C24 1.2 22.8 0 21.4 0zM7.1 20.5H3.7V9h3.4v11.5zm-1.7-13C4.3 7.5 3.4 6.6 3.4 5.5s.9-2 2-2 2 .9 2 2-.9 2-2 2zm15.1 13h-3.4v-5.6c0-1.3 0-3-1.8-3s-2.1 1.5-2.1 3v5.6H9.8V9h3.3v1.6h.1c.5-.9 1.6-1.8 3.3-1.8 3.5 0 4.1 2.3 4.1 5.3v6.4z" />
-                </svg>
-                Microsoft Azure
-              </button>
-            </div>
-
-            {/* Badges */}
-            <div className="mc-badges">
-              {['SOC 2 Type II', 'AES-256', 'SEBI Compliant', '2FA Required'].map(b => (
-                <span key={b} className="mc-badge">{b}</span>
-              ))}
-            </div>
-
-            <p className="mc-access">Don't have access? <a href="#">Request credentials →</a></p>
           </div>
         </div>
       </div>
@@ -900,6 +1199,8 @@ html, body { height: 100%; }
 .mc-forgot {
   font-size: 12px; color: var(--gold); text-decoration: none;
   font-weight: 500; opacity: 0.8; transition: opacity 0.2s;
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-family: var(--ff);
 }
 .mc-forgot:hover { opacity: 1; }
 

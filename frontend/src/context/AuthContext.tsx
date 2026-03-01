@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { authAPI } from '../services/api';
+import toast from 'react-hot-toast';
 
 interface Investor {
     id: string;
@@ -19,9 +20,99 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+const WARNING_BEFORE = 60 * 1000; // Show warning 1 minute before logout
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [investor, setInvestor] = useState<Investor | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const warningShownRef = useRef(false);
+
+    const performLogout = useCallback(async () => {
+        try {
+            await authAPI.logout();
+        } finally {
+            sessionStorage.removeItem('accessToken');
+            setInvestor(null);
+        }
+    }, []);
+
+    const clearInactivityTimers = useCallback(() => {
+        if (logoutTimerRef.current) { clearTimeout(logoutTimerRef.current); logoutTimerRef.current = null; }
+        if (warningTimerRef.current) { clearTimeout(warningTimerRef.current); warningTimerRef.current = null; }
+        warningShownRef.current = false;
+    }, []);
+
+    const resetInactivityTimer = useCallback(() => {
+        clearInactivityTimers();
+
+        // Warning timer — 1 minute before logout
+        warningTimerRef.current = setTimeout(() => {
+            if (!warningShownRef.current) {
+                warningShownRef.current = true;
+                toast('You will be logged out in 1 minute due to inactivity.', {
+                    icon: '⏱️',
+                    duration: 10000,
+                    style: {
+                        background: 'rgba(15,24,41,0.95)',
+                        color: '#EDE5CC',
+                        border: '1px solid rgba(197,164,84,0.3)',
+                    },
+                });
+            }
+        }, INACTIVITY_TIMEOUT - WARNING_BEFORE);
+
+        // Logout timer
+        logoutTimerRef.current = setTimeout(async () => {
+            toast('Session expired due to inactivity. Please log in again.', {
+                icon: '🔒',
+                duration: 5000,
+            });
+            await performLogout();
+        }, INACTIVITY_TIMEOUT);
+    }, [clearInactivityTimers, performLogout]);
+
+    // Set up activity listeners when user is authenticated
+    useEffect(() => {
+        if (!investor) {
+            clearInactivityTimers();
+            return;
+        }
+
+        const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+        const handleActivity = () => {
+            if (warningShownRef.current) {
+                warningShownRef.current = false;
+                toast.dismiss(); // Dismiss the warning toast
+            }
+            resetInactivityTimer();
+        };
+
+        // Throttle activity handler to avoid excessive timer resets
+        let throttleTimer: ReturnType<typeof setTimeout> | null = null;
+        const throttledHandler = () => {
+            if (throttleTimer) return;
+            handleActivity();
+            throttleTimer = setTimeout(() => { throttleTimer = null; }, 1000);
+        };
+
+        activityEvents.forEach(event => {
+            window.addEventListener(event, throttledHandler, { passive: true });
+        });
+
+        // Start the initial timer
+        resetInactivityTimer();
+
+        return () => {
+            activityEvents.forEach(event => {
+                window.removeEventListener(event, throttledHandler);
+            });
+            clearInactivityTimers();
+            if (throttleTimer) clearTimeout(throttleTimer);
+        };
+    }, [investor, resetInactivityTimer, clearInactivityTimers]);
 
     const checkAuth = useCallback(async () => {
         try {
@@ -52,12 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const logout = async () => {
-        try {
-            await authAPI.logout();
-        } finally {
-            sessionStorage.removeItem('accessToken');
-            setInvestor(null);
-        }
+        clearInactivityTimers();
+        await performLogout();
     };
 
     return (

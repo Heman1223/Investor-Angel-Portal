@@ -18,6 +18,7 @@ export async function createStartup(
         name: string; sector: string; stage: string; investmentDate: string;
         entryValuation: number; investedAmount: number; equityPercent: number;
         description?: string; website?: string; founderName?: string; founderEmail?: string;
+        coInvestors?: string;
     }
 ) {
     // Convert to paise
@@ -40,6 +41,7 @@ export async function createStartup(
             website: data.website,
             founderName: data.founderName,
             founderEmail: data.founderEmail,
+            coInvestors: data.coInvestors,
         }
     });
 
@@ -69,6 +71,7 @@ export async function createStartup(
     });
 
     invalidateAnalyticsCache();
+    runAlertEngine(investorId, startup.id).catch(() => { });
 
     return startup;
 }
@@ -86,6 +89,17 @@ export async function getAllStartups(investorId: string, status?: string) {
         where: { investorId },
         orderBy: { date: 'asc' }
     });
+
+    // Fetch latest monthly update per startup for runway data
+    const latestUpdates = await prisma.monthlyUpdate.findMany({
+        where: { startupId: { in: startups.map(s => s.id) } },
+        orderBy: { month: 'desc' },
+        distinct: ['startupId'],
+    });
+    const runwayMap = new Map<string, number>();
+    for (const u of latestUpdates) {
+        if (u.runwayMonths !== null) runwayMap.set(u.startupId, u.runwayMonths);
+    }
 
     return startups.map(startup => {
         const startupCashflows = cashflows.filter(
@@ -116,6 +130,7 @@ export async function getAllStartups(investorId: string, status?: string) {
 
         return {
             ...startup,
+            latestRunwayMonths: runwayMap.get(startup.id) ?? null,
             metrics: {
                 invested,
                 currentValue,
@@ -191,7 +206,7 @@ export async function getStartupById(investorId: string, startupId: string) {
 export async function updateStartup(
     investorId: string,
     startupId: string,
-    data: { name?: string; sector?: string; stage?: string; description?: string; website?: string; founderName?: string; founderEmail?: string },
+    data: { name?: string; sector?: string; stage?: string; description?: string; website?: string; founderName?: string; founderEmail?: string; coInvestors?: string },
     req?: { ip?: string; headers?: Record<string, any> }
 ) {
     const startup = await prisma.startup.findFirst({
@@ -365,6 +380,34 @@ export async function addFollowOn(
 
     invalidateAnalyticsCache();
     return getStartupById(investorId, startupId);
+}
+
+export async function addNote(investorId: string, startupId: string, text: string) {
+    const startup = await prisma.startup.findFirst({
+        where: { id: startupId, investorId }
+    });
+    if (!startup) {
+        throw createAppError('Startup not found', 404, 'NOT_FOUND');
+    }
+
+    const existingNotes = (startup.notes as Array<{ text: string; createdAt: string }>) || [];
+    const newNote = { text, createdAt: new Date().toISOString() };
+    const updatedNotes = [newNote, ...existingNotes];
+
+    const updatedStartup = await prisma.startup.update({
+        where: { id: startup.id },
+        data: { notes: updatedNotes as any }
+    });
+
+    await writeAuditLog({
+        investorId,
+        action: 'ADD_NOTE',
+        entityType: 'startup',
+        entityId: startupId,
+        newValue: { note: text },
+    });
+
+    return updatedStartup;
 }
 
 export async function softDeleteStartup(investorId: string, startupId: string) {

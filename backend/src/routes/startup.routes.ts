@@ -22,6 +22,7 @@ router.delete('/:id', startupController.deleteStartup);
 router.post('/:id/exit', startupController.recordExit);
 router.post('/:id/follow-on', startupController.addFollowOn);
 router.put('/:id/valuation', startupController.updateValuation);
+router.post('/:id/notes', startupController.addNote);
 
 // Monthly Updates (nested under startup)
 router.get('/:id/updates', updatesController.getUpdates);

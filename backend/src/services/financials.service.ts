@@ -48,7 +48,8 @@ export function calculateXIRR(cashflows: { amount: number; date: Date }[]): numb
         const npvMid = npv(mid);
 
         if (Math.abs(npvMid) < 0.001) {
-            return Math.round(mid * 10000) / 10000; // Round to 4 decimal places
+            const result = Math.round(mid * 10000) / 10000;
+            return isFinite(result) ? result : null;
         }
 
         if (npv(lo) * npvMid < 0) {
@@ -75,9 +76,10 @@ export function calculateMOIC(totalInvested: number, currentValue: number): numb
  * CAGR = (currentValue / investedAmount)^(1 / yearsHeld) - 1
  */
 export function calculateCAGR(invested: number, current: number, yearsHeld: number): number {
-    if (invested <= 0 || current <= 0) return 0;
+    if (invested <= 0 || current <= 0 || yearsHeld <= 0) return 0;
     const years = Math.max(yearsHeld, 0.1); // Minimum 0.1 to avoid division artifacts
-    return Math.pow(current / invested, 1 / years) - 1;
+    const result = Math.pow(current / invested, 1 / years) - 1;
+    return isFinite(result) ? result : 0;
 }
 
 /**
@@ -95,7 +97,7 @@ export function calculateTVPI(unrealisedValue: number, realisedReturns: number, 
  */
 export function calculateRunway(cashBalance: number, burnRate: number): number {
     if (cashBalance <= 0) return 0;
-    if (burnRate === 0) return Infinity;
+    if (burnRate <= 0) return 999; // JSON-safe "infinite runway"
     return Math.round((cashBalance / burnRate) * 10) / 10; // 1 decimal place
 }
 

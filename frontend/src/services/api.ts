@@ -76,6 +76,8 @@ export default api;
 export const authAPI = {
     login: (email: string, password: string) =>
         api.post('/auth/login', { email, password }),
+    register: (name: string, email: string, password: string) =>
+        api.post('/auth/register', { name, email, password }),
     logout: () => api.post('/auth/logout'),
     refresh: () => api.post('/auth/refresh'),
     me: () => api.get('/auth/me'),
@@ -104,6 +106,8 @@ export const startupsAPI = {
         api.post(`/startups/${id}/follow-on`, data),
     updateValuation: (id: string, currentValuation: number) =>
         api.put(`/startups/${id}/valuation`, { currentValuation }),
+    addNote: (id: string, text: string) =>
+        api.post(`/startups/${id}/notes`, { text }),
 };
 
 // Monthly Updates
@@ -153,4 +157,10 @@ export const settingsAPI = {
     getAuditLog: (page: number, limit: number) =>
         api.get('/settings/audit-log', { params: { page, limit } }),
     exportData: () => api.get('/settings/export'),
+};
+
+// Reports
+export const reportsAPI = {
+    portfolioPDF: () => api.post('/reports/portfolio', {}, { responseType: 'blob' }),
+    startupPDF: (startupId: string) => api.post(`/reports/startup/${startupId}`, {}, { responseType: 'blob' }),
 };

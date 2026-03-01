@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+    AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
     Plus, DoorOpen, TrendingUp, X, AlertTriangle,
-    Share2, Edit3, MapPin, Building2, Calendar, ChevronRight, Download, Mail
+    Share2, Edit3, MapPin, Building2, Calendar, ChevronRight, Download, Mail,
+    Users, StickyNote, Send
 } from 'lucide-react';
 import { startupsAPI, updatesAPI, documentsAPI } from '../services/api';
 import {
@@ -15,7 +16,7 @@ import {
 } from '../utils/formatters';
 import toast from 'react-hot-toast';
 
-type TabId = 'overview' | 'cashflows' | 'updates' | 'documents';
+type TabId = 'overview' | 'cashflows' | 'updates' | 'documents' | 'notes' | 'dilution';
 
 export default function StartupDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -87,6 +88,15 @@ export default function StartupDetailPage() {
         onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed'),
     });
 
+    const noteMutation = useMutation({
+        mutationFn: (text: string) => startupsAPI.addNote(id!, text),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['startup', id] });
+            toast.success('Note added');
+        },
+        onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed to add note'),
+    });
+
     if (isLoading) {
         return (
             <div className="space-y-6 animate-[pulse_1.5s_ease-in-out_infinite]">
@@ -125,6 +135,8 @@ export default function StartupDetailPage() {
         { id: 'overview', label: 'Overview' },
         { id: 'cashflows', label: 'Cashflows' },
         { id: 'updates', label: 'Monthly Updates' },
+        { id: 'notes', label: 'Notes & Co-investors' },
+        { id: 'dilution', label: 'Dilution History' },
         { id: 'documents', label: 'Documents' },
     ];
 
@@ -275,6 +287,18 @@ export default function StartupDetailPage() {
 
             {activeTab === 'documents' && (
                 <DocumentsTab documents={documents} />
+            )}
+
+            {activeTab === 'notes' && (
+                <NotesTab
+                    startup={s}
+                    onAddNote={(text: string) => noteMutation.mutate(text)}
+                    isLoading={noteMutation.isPending}
+                />
+            )}
+
+            {activeTab === 'dilution' && (
+                <DilutionTab startup={s} />
             )}
 
             {/* Action Buttons for active startups */}
@@ -633,23 +657,197 @@ function DocumentsTab({ documents }: { documents: any[] }) {
     );
 }
 
+function NotesTab({ startup, onAddNote, isLoading }: { startup: any; onAddNote: (text: string) => void; isLoading: boolean }) {
+    const [noteText, setNoteText] = useState('');
+    const notes = (startup.notes as Array<{ text: string; createdAt: string }>) || [];
+    const coInvestors = startup.coInvestors ? startup.coInvestors.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Notes */}
+            <div className="lg:col-span-2 space-y-4">
+                {/* Add Note */}
+                <div className="card" style={{ padding: '20px' }}>
+                    <h3 className="text-base font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                        <StickyNote size={16} style={{ display: 'inline', marginRight: 8 }} />
+                        Add Note
+                    </h3>
+                    <form onSubmit={e => { e.preventDefault(); if (noteText.trim()) { onAddNote(noteText.trim()); setNoteText(''); } }} className="flex gap-3">
+                        <textarea
+                            className="input flex-1"
+                            rows={2}
+                            value={noteText}
+                            onChange={e => setNoteText(e.target.value)}
+                            placeholder="Add a note about this startup..."
+                            style={{ resize: 'vertical' }}
+                        />
+                        <button type="submit" disabled={isLoading || !noteText.trim()} className="btn btn-primary" style={{ alignSelf: 'flex-end' }}>
+                            <Send size={14} /> {isLoading ? 'Adding...' : 'Add'}
+                        </button>
+                    </form>
+                </div>
+
+                {/* Notes List */}
+                {notes.length > 0 ? (
+                    <div className="space-y-3">
+                        {notes.map((note, i) => (
+                            <div key={i} className="card" style={{ padding: '16px 20px' }}>
+                                <p className="text-sm" style={{ color: 'var(--color-text-primary)', lineHeight: 1.6 }}>{note.text}</p>
+                                <p className="text-[11px] mt-2" style={{ color: 'var(--color-text-muted)' }}>
+                                    {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(note.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="card text-center py-10" style={{ color: 'var(--color-text-muted)' }}>
+                        No notes yet — add one above
+                    </div>
+                )}
+            </div>
+
+            {/* Co-investors sidebar */}
+            <div>
+                <div className="card" style={{ padding: '20px' }}>
+                    <h3 className="text-base font-bold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                        <Users size={16} style={{ display: 'inline', marginRight: 8 }} />
+                        Co-Investors
+                    </h3>
+                    {coInvestors.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                            {coInvestors.map((name: string, i: number) => (
+                                <span key={i} className="badge badge-blue" style={{ fontSize: '12px', padding: '4px 12px' }}>
+                                    {name}
+                                </span>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
+                            No co-investors listed.
+                            <br />
+                            <span className="text-xs">Edit the startup to add co-investors.</span>
+                        </p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DilutionTab({ startup }: { startup: any }) {
+    const dilutionEvents = startup.dilutionEvents || [];
+
+    // Build valuation timeline from cashflows
+    const valuationTimeline = (startup.cashflows || [])
+        .filter((cf: any) => cf.valuationAtTime)
+        .map((cf: any) => ({
+            name: formatDate(cf.date),
+            valuation: paiseToRupees(cf.valuationAtTime),
+        }));
+
+    return (
+        <div className="space-y-6">
+            {/* Valuation Timeline Chart */}
+            {valuationTimeline.length > 1 && (
+                <div className="card" style={{ padding: '24px' }}>
+                    <h3 className="text-base font-bold mb-5" style={{ color: 'var(--color-text-primary)' }}>
+                        Valuation Timeline
+                    </h3>
+                    <div className="h-[260px]">
+                        <ResponsiveContainer>
+                            <LineChart data={valuationTimeline} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(197,164,84,0.08)" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: 'var(--color-text-secondary)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: 'var(--color-text-secondary)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => formatCurrencyCompact(v)} />
+                                <Tooltip
+                                    contentStyle={{ background: 'var(--color-navy-2, #0C1624)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 13, padding: '8px 12px', boxShadow: 'var(--shadow-lg)', color: 'var(--color-text-primary)' }}
+                                    formatter={(v: number | undefined) => formatCurrencyCompact(v ?? 0)}
+                                    labelStyle={{ color: 'var(--color-text-muted)' }}
+                                />
+                                <Line type="monotone" dataKey="valuation" stroke="#A78BFA" strokeWidth={2.5} dot={{ fill: '#A78BFA', r: 4, stroke: '#0B1221', strokeWidth: 2 }} name="Valuation" />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            )}
+
+            {/* Dilution Events Table */}
+            {dilutionEvents.length > 0 ? (
+                <div className="card" style={{ padding: 0 }}>
+                    <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--color-border-light)' }}>
+                        <h3 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                            Dilution Events
+                        </h3>
+                    </div>
+                    <table className="w-full">
+                        <thead>
+                            <tr>
+                                <th style={{ padding: '12px 20px' }}>Round</th>
+                                <th style={{ padding: '12px 20px' }}>Date</th>
+                                <th style={{ padding: '12px 20px' }}>Pre-Dilution %</th>
+                                <th style={{ padding: '12px 20px' }}>Post-Dilution %</th>
+                                <th style={{ padding: '12px 20px' }}>Change</th>
+                                <th style={{ padding: '12px 20px' }}>Valuation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {dilutionEvents.map((de: any) => {
+                                const change = de.postDilutionEquity - de.preDilutionEquity;
+                                return (
+                                    <tr key={de.id}>
+                                        <td className="text-sm font-medium" style={{ padding: '12px 20px', color: 'var(--color-text-primary)' }}>{de.roundName}</td>
+                                        <td className="text-sm" style={{ padding: '12px 20px', color: 'var(--color-text-secondary)' }}>{formatDate(de.date)}</td>
+                                        <td className="font-mono text-sm" style={{ padding: '12px 20px', color: 'var(--color-text-primary)' }}>{de.preDilutionEquity.toFixed(2)}%</td>
+                                        <td className="font-mono text-sm" style={{ padding: '12px 20px', color: 'var(--color-text-primary)' }}>{de.postDilutionEquity.toFixed(2)}%</td>
+                                        <td style={{ padding: '12px 20px' }}>
+                                            <span className={`font-mono text-sm font-semibold ${change >= 0 ? 'text-[var(--color-green)]' : 'text-[var(--color-red)]'}`}>
+                                                {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                                            </span>
+                                        </td>
+                                        <td className="font-mono text-sm" style={{ padding: '12px 20px', color: 'var(--color-text-primary)' }}>
+                                            {de.roundValuation ? formatCurrencyCompact(paiseToRupees(de.roundValuation)) : '—'}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <div className="card text-center py-10" style={{ color: 'var(--color-text-muted)' }}>
+                    No dilution events recorded yet
+                </div>
+            )}
+        </div>
+    );
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Modals
    ═══════════════════════════════════════════════════════════════ */
 
 function MonthlyUpdateModal({ onClose, onSubmit, isLoading }: any) {
-    const [form, setForm] = useState({ month: '', revenue: '', burnRate: '', cashBalance: '', notes: '' });
+    const [form, setForm] = useState({ month: '', revenue: '', burnRate: '', cashBalance: '', notes: '', headcount: '', keyWins: '', keyChallenges: '', helpNeeded: '' });
     const runway = form.burnRate && form.cashBalance ?
         (parseFloat(form.cashBalance) <= 0 ? 0 : parseFloat(form.burnRate) === 0 ? Infinity : (parseFloat(form.cashBalance) / parseFloat(form.burnRate))) : null;
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh', overflowY: 'auto' }}>
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>Add Monthly Update</h2>
                     <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
                 </div>
-                <form onSubmit={e => { e.preventDefault(); onSubmit({ ...form, revenue: parseFloat(form.revenue), burnRate: parseFloat(form.burnRate), cashBalance: parseFloat(form.cashBalance) }); }} className="space-y-4">
+                <form onSubmit={e => {
+                    e.preventDefault();
+                    onSubmit({
+                        ...form,
+                        revenue: parseFloat(form.revenue),
+                        burnRate: parseFloat(form.burnRate),
+                        cashBalance: parseFloat(form.cashBalance),
+                        headcount: form.headcount ? parseInt(form.headcount) : undefined,
+                    });
+                }} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Month *</label>
                         <input type="month" className="input" value={form.month} onChange={e => setForm({ ...form, month: e.target.value })} required />
@@ -664,9 +862,15 @@ function MonthlyUpdateModal({ onClose, onSubmit, isLoading }: any) {
                             <input type="number" className="input" value={form.burnRate} onChange={e => setForm({ ...form, burnRate: e.target.value })} required min="0" step="any" />
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Cash Balance (₹) *</label>
-                        <input type="number" className="input" value={form.cashBalance} onChange={e => setForm({ ...form, cashBalance: e.target.value })} required step="any" />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Cash Balance (₹) *</label>
+                            <input type="number" className="input" value={form.cashBalance} onChange={e => setForm({ ...form, cashBalance: e.target.value })} required step="any" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Team Headcount</label>
+                            <input type="number" className="input" value={form.headcount} onChange={e => setForm({ ...form, headcount: e.target.value })} min="0" placeholder="e.g. 25" />
+                        </div>
                     </div>
                     {runway !== null && (
                         <div className="p-3 rounded-lg" style={{ background: 'var(--color-bg-hover)', border: '1px solid var(--color-border-light)' }}>
@@ -677,7 +881,19 @@ function MonthlyUpdateModal({ onClose, onSubmit, isLoading }: any) {
                         </div>
                     )}
                     <div>
-                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Notes</label>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Key Wins / Milestones</label>
+                        <textarea className="input" rows={2} value={form.keyWins} onChange={e => setForm({ ...form, keyWins: e.target.value })} placeholder="Product launches, partnerships, revenue milestones..." />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Key Challenges</label>
+                        <textarea className="input" rows={2} value={form.keyChallenges} onChange={e => setForm({ ...form, keyChallenges: e.target.value })} placeholder="Hiring difficulties, market headwinds, churn..." />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Help Needed from Investor</label>
+                        <textarea className="input" rows={2} value={form.helpNeeded} onChange={e => setForm({ ...form, helpNeeded: e.target.value })} placeholder="Introductions, strategic advice, follow-on funding..." />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>General Notes</label>
                         <textarea className="input" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
                     </div>
                     <div className="flex gap-3 pt-2">

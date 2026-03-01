@@ -6,6 +6,7 @@ import { authLimiter } from '../middleware/rateLimiter';
 const router = Router();
 
 // Public routes
+router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
 router.post('/logout', authController.logout);
 router.post('/refresh', authController.refresh);

@@ -660,6 +660,24 @@ function TableView({ rows, sortKey, onSort, onRowClick, page, totalPages, totalC
 function CardItem({ startup: s, onClick }: any) {
     const stageStyle = STAGE_COLORS[s.stage] || { bg: 'rgba(255,255,255,.06)', color: 'var(--color-text-muted)' };
     const gain = s.metrics.currentValue - s.metrics.invested;
+
+    // Derive health badge from latest runway or MOIC
+    let healthColor = 'var(--color-green,#22c55e)';
+    let healthBg = 'rgba(74,222,128,0.12)';
+    let healthLabel = 'Healthy';
+    const moic = s.metrics.moic || 0;
+    if (s.latestRunwayMonths !== undefined && s.latestRunwayMonths !== null) {
+        if (s.latestRunwayMonths < 3) {
+            healthColor = 'var(--color-red,#ef4444)'; healthBg = 'rgba(248,113,113,0.12)'; healthLabel = 'Critical';
+        } else if (s.latestRunwayMonths < 6) {
+            healthColor = 'var(--color-yellow,#fbbf24)'; healthBg = 'rgba(251,191,36,0.12)'; healthLabel = 'Warning';
+        }
+    } else if (moic < 0.5) {
+        healthColor = 'var(--color-red,#ef4444)'; healthBg = 'rgba(248,113,113,0.12)'; healthLabel = 'At Risk';
+    } else if (moic < 1) {
+        healthColor = 'var(--color-yellow,#fbbf24)'; healthBg = 'rgba(251,191,36,0.12)'; healthLabel = 'Below Par';
+    }
+
     return (
         <div className="pp-card" onClick={onClick}>
             <div className="pp-card-head">
@@ -683,6 +701,11 @@ function CardItem({ startup: s, onClick }: any) {
                 <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12, fontWeight: 700, background: stageStyle.bg, color: stageStyle.color }}>
                     {s.stage}
                 </span>
+                {s.status === 'active' && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12, fontWeight: 700, background: healthBg, color: healthColor }}>
+                        ● {healthLabel}
+                    </span>
+                )}
             </div>
 
             <div className="pp-card-metrics">

@@ -93,3 +93,15 @@ export async function updateValuation(req: AuthRequest, res: Response, next: Nex
         res.json({ success: true, data: startup });
     } catch (error) { next(error); }
 }
+
+export async function addNote(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { text } = req.body;
+        if (!text || typeof text !== 'string' || text.trim().length === 0) {
+            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Note text is required' } });
+            return;
+        }
+        const startup = await startupService.addNote(req.investor!.id, req.params.id, text.trim());
+        res.json({ success: true, data: startup });
+    } catch (error) { next(error); }
+}

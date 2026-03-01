@@ -25,6 +25,37 @@ function generateRefreshToken(investor: Investor): string {
     );
 }
 
+export async function registerInvestor(name: string, email: string, password: string) {
+    const existing = await prisma.investor.findUnique({ where: { email: email.toLowerCase() } });
+    if (existing) {
+        throw createAppError('An account with this email already exists', 409, 'CONFLICT');
+    }
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const investor = await prisma.investor.create({
+        data: {
+            name,
+            email: email.toLowerCase(),
+            passwordHash,
+        },
+    });
+
+    const accessToken = generateAccessToken(investor);
+    const refreshToken = generateRefreshToken(investor);
+
+    return {
+        accessToken,
+        refreshToken,
+        investor: {
+            id: investor.id,
+            name: investor.name,
+            email: investor.email,
+            role: investor.role,
+            subscriptionTier: investor.subscriptionTier,
+        },
+    };
+}
+
 export async function loginInvestor(email: string, password: string) {
     const investor = await prisma.investor.findUnique({ where: { email: email.toLowerCase() } });
     if (!investor) {

@@ -34,21 +34,24 @@ interface PortfolioAnalytics {
     portfolioTVPI: number;
     activeCount: number;
     exitedCount: number;
-    sectorAllocation: { sector: string; invested: number; currentValue: number }[];
+    sectorAllocation: { sector: string; invested: number; currentValue: number; avgIRR: number | null; avgMOIC: number; count: number }[];
+    bestSector: { sector: string; avgMOIC: number } | null;
+    worstSector: { sector: string; avgMOIC: number } | null;
     startupMetrics: StartupMetric[];
 }
 
-// Simple in-memory cache with 30-second TTL
-let analyticsCache: { data: PortfolioAnalytics; expiresAt: number } | null = null;
+// Per-investor in-memory cache with 30-second TTL
+const analyticsCacheMap = new Map<string, { data: PortfolioAnalytics; expiresAt: number }>();
 
 export function invalidateAnalyticsCache(): void {
-    analyticsCache = null;
+    analyticsCacheMap.clear();
 }
 
 export async function getPortfolioAnalytics(investorId: string): Promise<PortfolioAnalytics> {
-    // Check cache
-    if (analyticsCache && analyticsCache.expiresAt > Date.now()) {
-        return analyticsCache.data;
+    // Check per-investor cache
+    const cached = analyticsCacheMap.get(investorId);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.data;
     }
 
     const startups = await prisma.startup.findMany({ where: { investorId } });
@@ -150,11 +153,24 @@ export async function getPortfolioAnalytics(investorId: string): Promise<Portfol
         totalInvested
     );
 
-    const sectorAllocation = Array.from(sectorMap.entries()).map(([sector, data]) => ({
-        sector,
-        invested: data.invested,
-        currentValue: data.currentValue,
-    }));
+    const sectorAllocation = Array.from(sectorMap.entries()).map(([sector, data]) => {
+        const sectorStartups = startupMetrics.filter(sm => sm.sector === sector);
+        const irrValues = sectorStartups.map(sm => sm.xirr).filter((v): v is number => v !== null);
+        const avgIRR = irrValues.length > 0 ? irrValues.reduce((a, b) => a + b, 0) / irrValues.length : null;
+        const avgMOIC = sectorStartups.length > 0 ? sectorStartups.reduce((sum, sm) => sum + sm.moic, 0) / sectorStartups.length : 0;
+        return {
+            sector,
+            invested: data.invested,
+            currentValue: data.currentValue,
+            avgIRR,
+            avgMOIC,
+            count: sectorStartups.length,
+        };
+    });
+
+    const sortedSectors = [...sectorAllocation].sort((a, b) => b.avgMOIC - a.avgMOIC);
+    const bestSector = sortedSectors.length > 0 ? { sector: sortedSectors[0].sector, avgMOIC: sortedSectors[0].avgMOIC } : null;
+    const worstSector = sortedSectors.length > 1 ? { sector: sortedSectors[sortedSectors.length - 1].sector, avgMOIC: sortedSectors[sortedSectors.length - 1].avgMOIC } : null;
 
     const result: PortfolioAnalytics = {
         totalInvested,
@@ -166,11 +182,13 @@ export async function getPortfolioAnalytics(investorId: string): Promise<Portfol
         activeCount,
         exitedCount,
         sectorAllocation,
+        bestSector,
+        worstSector,
         startupMetrics,
     };
 
-    // Cache for 30 seconds
-    analyticsCache = { data: result, expiresAt: Date.now() + 30000 };
+    // Cache per investor for 30 seconds
+    analyticsCacheMap.set(investorId, { data: result, expiresAt: Date.now() + 30000 });
 
     return result;
 }
