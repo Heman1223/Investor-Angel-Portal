@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { startupsAPI } from '../services/api';
 import { formatCurrencyCompact, formatPercent, paiseToRupees } from '../utils/formatters';
+import { invalidateInvestmentQueries } from '../utils/invalidation';
 import toast from 'react-hot-toast';
 
 const STAGES = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'Pre-IPO'];
@@ -58,8 +59,7 @@ export default function PortfolioPage() {
     const createMutation = useMutation({
         mutationFn: (data: any) => startupsAPI.create(data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['startups'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            invalidateInvestmentQueries(queryClient);
             setShowAddModal(false);
             toast.success('Investment added successfully');
         },
@@ -276,11 +276,11 @@ export default function PortfolioPage() {
                         <p className="pp-sub">Track and manage your angel investments</p>
                     </div>
                     <div className="pp-actions" style={{ display: 'flex', gap: '12px' }}>
-                        <button className="btn btn-secondary" onClick={handleExport} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--cream)', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
+                        <button title="Export portfolio data as CSV" className="btn btn-secondary" onClick={handleExport} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--cream)', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
                             <Download size={16} strokeWidth={2} />
                             Export CSV
                         </button>
-                        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                        <button title="Add a new investment" className="btn btn-primary" onClick={() => setShowAddModal(true)}>
                             <Plus size={16} strokeWidth={2.5} />
                             Add Investment
                         </button>

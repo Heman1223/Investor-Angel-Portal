@@ -123,7 +123,7 @@ export default function DashboardPage() {
                         </div>
                         <h2 className="d-empty-title">Your portfolio is empty</h2>
                         <p className="d-empty-sub">Add your first investment to get started building your portfolio.</p>
-                        <button onClick={() => navigate('/portfolio')} className="d-btn-primary">
+                        <button title="Go to portfolio" onClick={() => navigate('/portfolio')} className="d-btn-primary">
                             <Plus size={16} strokeWidth={2.5} />
                             Add First Investment
                         </button>
@@ -171,12 +171,12 @@ export default function DashboardPage() {
                     </div>
                     <div className="d-header-actions">
                         {redAlerts.length > 0 && (
-                            <button className="d-alert-badge" onClick={() => navigate('/alerts')}>
+                            <button title="View critical alerts" className="d-alert-badge" onClick={() => navigate('/alerts')}>
                                 <AlertTriangle size={13} strokeWidth={2.5} />
                                 {redAlerts.length} critical alert{redAlerts.length !== 1 ? 's' : ''}
                             </button>
                         )}
-                        <button className="d-btn-primary" onClick={() => navigate('/portfolio')}>
+                        <button title="Add a new investment" className="d-btn-primary" onClick={() => navigate('/portfolio')}>
                             <Plus size={15} strokeWidth={2.5} /> New Investment
                         </button>
                     </div>
@@ -216,7 +216,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="d-period-toggle">
                                 {['1Y', '3Y', 'ALL'].map(p => (
-                                    <button key={p} className={`d-period-btn ${activePeriod === p ? 'active' : ''}`}
+                                    <button key={p} title={`Show ${p} data`} className={`d-period-btn ${activePeriod === p ? 'active' : ''}`}
                                         onClick={() => setActivePeriod(p)}>{p}</button>
                                 ))}
                             </div>
@@ -424,7 +424,7 @@ export default function DashboardPage() {
                             </div>
                         )}
 
-                        <button className="d-alerts-cta" onClick={() => navigate('/alerts')}>
+                        <button title="View all risk alerts" className="d-alerts-cta" onClick={() => navigate('/alerts')}>
                             View all risk activity <ChevronRight size={13} strokeWidth={2.5} />
                         </button>
                     </div>
@@ -436,7 +436,7 @@ export default function DashboardPage() {
                                 <h3 className="d-card-title">Portfolio Companies</h3>
                                 <p className="d-card-sub">Top holdings by current value</p>
                             </div>
-                            <button className="d-view-all" onClick={() => navigate('/portfolio')}>
+                            <button title="View full portfolio" className="d-view-all" onClick={() => navigate('/portfolio')}>
                                 View all <ChevronRight size={13} strokeWidth={2.5} />
                             </button>
                         </div>

@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
     LayoutDashboard, Rocket, FolderOpen, FileText,
-    Settings, Plus, TrendingUp, ChevronRight, BarChart3, Zap, GitCompare, Bell
+    Settings, Plus, TrendingUp, ChevronRight, BarChart3, Zap, GitCompare, Bell, Calculator
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dashboardAPI, alertsAPI } from '../../services/api';
@@ -66,6 +66,7 @@ export default function Sidebar() {
         { to: '/alerts', icon: Bell, label: 'Alerts', end: false, badge: unreadAlertCount > 0 ? `${unreadAlertCount}` : undefined },
         { to: '/reports', icon: FileText, label: 'Reports', end: false },
         { to: '/compare', icon: GitCompare, label: 'Compare', end: false },
+        { to: '/scenarios', icon: Calculator, label: 'Scenarios', end: false },
         { to: '/settings', icon: Settings, label: 'Settings', end: false },
     ];
 
@@ -88,8 +89,8 @@ export default function Sidebar() {
                     </div>
                     {!collapsed && (
                         <div className="sb-brand-text">
-                            <span className="sb-brand-name">MERIDIAN</span>
-                            <span className="sb-brand-sub">Capital Partners</span>
+                            <span className="sb-brand-name">ANGEL</span>
+                            <span className="sb-brand-sub">Investor Portfolio</span>
                         </div>
                     )}
                     <button className={`sb-toggle ${collapsed ? 'sb-toggle-collapsed' : ''}`} onClick={() => setCollapsed(!collapsed)} title={collapsed ? 'Expand' : 'Collapse'}>

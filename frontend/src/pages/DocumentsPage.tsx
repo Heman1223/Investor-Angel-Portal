@@ -122,7 +122,7 @@ export default function DocumentsPage() {
                         {filteredDocs.length} of {documents.length} document{documents.length !== 1 ? 's' : ''}{search ? ' matching search' : ''}
                     </p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowUploadModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button title="Upload a new document" className="btn btn-primary" onClick={() => setShowUploadModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <UploadCloud size={16} /> Upload Document
                 </button>
             </div>
@@ -213,10 +213,11 @@ export default function DocumentsPage() {
                                         </td>
                                         <td style={{ padding: '14px 20px' }}>
                                             <div style={{ display: 'flex', gap: 4 }}>
-                                                <button style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}>
+                                                <button title="Download document" style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}>
                                                     <Download size={14} />
                                                 </button>
                                                 <button
+                                                    title="Delete document"
                                                     onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: doc._id, name: doc.fileName }); }}
                                                     style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
                                                 >

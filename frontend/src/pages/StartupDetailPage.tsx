@@ -7,13 +7,14 @@ import {
 import {
     Plus, DoorOpen, TrendingUp, X, AlertTriangle,
     Share2, Edit3, MapPin, Building2, Calendar, ChevronRight, Download, Mail,
-    Users, StickyNote, Send
+    Users, StickyNote, Send, ChevronDown, Trash2
 } from 'lucide-react';
-import { startupsAPI, updatesAPI, documentsAPI } from '../services/api';
+import { startupsAPI, updatesAPI, documentsAPI, cashflowsAPI } from '../services/api';
 import {
     formatCurrencyCompact, formatMOIC, formatPercent, formatDate, formatMonth,
     formatRunway, paiseToRupees
 } from '../utils/formatters';
+import { invalidateInvestmentQueries } from '../utils/invalidation';
 import toast from 'react-hot-toast';
 
 type TabId = 'overview' | 'cashflows' | 'updates' | 'documents' | 'notes' | 'dilution';
@@ -26,6 +27,9 @@ export default function StartupDetailPage() {
     const [showUpdateModal, setShowUpdateModal] = useState(false);
     const [showExitModal, setShowExitModal] = useState(false);
     const [showFollowOnModal, setShowFollowOnModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showWriteOffConfirm, setShowWriteOffConfirm] = useState(false);
+    const [showManageMenu, setShowManageMenu] = useState(false);
 
     const { data: startup, isLoading } = useQuery({
         queryKey: ['startup', id],
@@ -57,9 +61,7 @@ export default function StartupDetailPage() {
     const updateMutation = useMutation({
         mutationFn: (data: any) => updatesAPI.create(id!, data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['startup', id] });
-            queryClient.invalidateQueries({ queryKey: ['updates', id] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            invalidateInvestmentQueries(queryClient, id);
             setShowUpdateModal(false);
             toast.success('Monthly update submitted');
         },
@@ -69,8 +71,7 @@ export default function StartupDetailPage() {
     const exitMutation = useMutation({
         mutationFn: (data: any) => startupsAPI.recordExit(id!, data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['startup', id] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            invalidateInvestmentQueries(queryClient, id);
             setShowExitModal(false);
             toast.success('Exit recorded');
         },
@@ -80,8 +81,7 @@ export default function StartupDetailPage() {
     const followOnMutation = useMutation({
         mutationFn: (data: any) => startupsAPI.addFollowOn(id!, data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['startup', id] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            invalidateInvestmentQueries(queryClient, id);
             setShowFollowOnModal(false);
             toast.success('Follow-on recorded');
         },
@@ -91,10 +91,31 @@ export default function StartupDetailPage() {
     const noteMutation = useMutation({
         mutationFn: (text: string) => startupsAPI.addNote(id!, text),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['startup', id] });
+            invalidateInvestmentQueries(queryClient, id);
             toast.success('Note added');
         },
         onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed to add note'),
+    });
+
+    const editMutation = useMutation({
+        mutationFn: (data: any) => startupsAPI.update(id!, data),
+        onSuccess: () => {
+            invalidateInvestmentQueries(queryClient, id);
+            setShowEditModal(false);
+            toast.success('Startup updated');
+        },
+        onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed to update startup'),
+    });
+
+    const writeOffMutation = useMutation({
+        mutationFn: () => startupsAPI.delete(id!),
+        onSuccess: () => {
+            invalidateInvestmentQueries(queryClient, id);
+            setShowWriteOffConfirm(false);
+            toast.success('Startup written off');
+            navigate('/portfolio');
+        },
+        onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed to write off'),
     });
 
     if (isLoading) {
@@ -217,15 +238,54 @@ export default function StartupDetailPage() {
                 </div>
                 {s.status === 'active' && (
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <button className="btn btn-secondary btn-sm">
+                        <button title="Share startup details" className="btn btn-secondary btn-sm">
                             <Share2 size={14} /> Share
                         </button>
-                        <button
-                            onClick={() => setShowFollowOnModal(true)}
-                            className="btn btn-primary btn-sm"
-                        >
-                            <Edit3 size={14} /> Manage Investment
-                        </button>
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                title="Manage this investment"
+                                onClick={() => setShowManageMenu(!showManageMenu)}
+                                className="btn btn-primary btn-sm"
+                            >
+                                <Edit3 size={14} /> Manage <ChevronDown size={12} />
+                            </button>
+                            {showManageMenu && (
+                                <div style={{
+                                    position: 'absolute', right: 0, top: 'calc(100% + 6px)', minWidth: 200,
+                                    background: 'var(--color-card-bg, #0f1c2e)', border: '1px solid var(--color-border-light)',
+                                    borderRadius: 12, boxShadow: '0 16px 48px rgba(0,0,0,.5)', zIndex: 50, overflow: 'hidden',
+                                }}>
+                                    <button
+                                        title="Edit startup details"
+                                        onClick={() => { setShowManageMenu(false); setShowEditModal(true); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', border: 'none', background: 'none', color: 'var(--color-text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', textAlign: 'left' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-hover)')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                    >
+                                        <Edit3 size={14} /> Edit Startup
+                                    </button>
+                                    <button
+                                        title="Add a follow-on investment"
+                                        onClick={() => { setShowManageMenu(false); setShowFollowOnModal(true); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', border: 'none', background: 'none', color: 'var(--color-text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', textAlign: 'left' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-hover)')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                    >
+                                        <TrendingUp size={14} /> Add Follow-On
+                                    </button>
+                                    <div style={{ height: 1, background: 'var(--color-border-light)', margin: '4px 0' }} />
+                                    <button
+                                        title="Write off this startup"
+                                        onClick={() => { setShowManageMenu(false); setShowWriteOffConfirm(true); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', border: 'none', background: 'none', color: 'var(--color-red, #ef4444)', fontSize: 13, fontWeight: 500, cursor: 'pointer', textAlign: 'left' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                    >
+                                        <Trash2 size={14} /> Write Off Startup
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
@@ -320,6 +380,8 @@ export default function StartupDetailPage() {
             {showUpdateModal && <MonthlyUpdateModal onClose={() => setShowUpdateModal(false)} onSubmit={(d: any) => updateMutation.mutate(d)} isLoading={updateMutation.isPending} />}
             {showExitModal && <ExitModal onClose={() => setShowExitModal(false)} onSubmit={(d: any) => exitMutation.mutate(d)} isLoading={exitMutation.isPending} />}
             {showFollowOnModal && <FollowOnModal onClose={() => setShowFollowOnModal(false)} onSubmit={(d: any) => followOnMutation.mutate(d)} isLoading={followOnMutation.isPending} />}
+            {showEditModal && <EditStartupModal startup={s} onClose={() => setShowEditModal(false)} onSubmit={(d: any) => editMutation.mutate(d)} isLoading={editMutation.isPending} />}
+            {showWriteOffConfirm && <WriteOffConfirmDialog startupName={s.name} onClose={() => setShowWriteOffConfirm(false)} onConfirm={() => writeOffMutation.mutate()} isLoading={writeOffMutation.isPending} />}
         </div>
     );
 }
@@ -536,8 +598,35 @@ function OverviewTab({ startup, updates, documents }: any) {
 }
 
 function CashflowsTab({ startup }: { startup: any }) {
+    const queryClient = useQueryClient();
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [editingCf, setEditingCf] = useState<any>(null);
+    const [deletingCf, setDeletingCf] = useState<any>(null);
+
+    const addMutation = useMutation({
+        mutationFn: (data: any) => cashflowsAPI.add(startup.id, data),
+        onSuccess: () => { invalidateInvestmentQueries(queryClient, startup.id); setShowAddModal(false); toast.success('Cashflow added'); },
+        onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed'),
+    });
+    const editMutation = useMutation({
+        mutationFn: ({ cfId, data }: { cfId: string; data: any }) => cashflowsAPI.update(startup.id, cfId, data),
+        onSuccess: () => { invalidateInvestmentQueries(queryClient, startup.id); setEditingCf(null); toast.success('Cashflow updated'); },
+        onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed'),
+    });
+    const deleteMutation = useMutation({
+        mutationFn: ({ cfId, reason }: { cfId: string; reason: string }) => cashflowsAPI.delete(startup.id, cfId, reason),
+        onSuccess: () => { invalidateInvestmentQueries(queryClient, startup.id); setDeletingCf(null); toast.success('Cashflow deleted'); },
+        onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed'),
+    });
+
     return (
         <div className="card" style={{ padding: 0 }}>
+            <div className="flex items-center justify-between" style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-border-light)' }}>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>Transaction Ledger</h3>
+                <button onClick={() => setShowAddModal(true)} className="btn btn-primary btn-sm" style={{ fontSize: 12, padding: '5px 12px' }}>
+                    <Plus size={13} /> Add Entry
+                </button>
+            </div>
             <table className="w-full">
                 <thead>
                     <tr>
@@ -546,11 +635,12 @@ function CashflowsTab({ startup }: { startup: any }) {
                         <th style={{ padding: '12px 20px' }}>Amount</th>
                         <th style={{ padding: '12px 20px' }}>Round</th>
                         <th style={{ padding: '12px 20px' }}>Notes</th>
+                        <th style={{ padding: '12px 14px', width: 70 }}>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {startup.cashflows?.map((cf: any) => (
-                        <tr key={cf._id}>
+                        <tr key={cf.id || cf._id}>
                             <td style={{ padding: '12px 20px' }} className="text-sm">{formatDate(cf.date)}</td>
                             <td style={{ padding: '12px 20px' }}>
                                 <span className={`badge ${cf.amount < 0 ? 'badge-red' : 'badge-green'}`} style={{ fontSize: '11px', padding: '2px 8px' }}>
@@ -560,12 +650,28 @@ function CashflowsTab({ startup }: { startup: any }) {
                             <td style={{ padding: '12px 20px' }} className={`font-mono text-sm font-semibold ${cf.amount < 0 ? 'text-[var(--color-red)]' : 'text-[var(--color-green)]'}`}>
                                 {cf.amount < 0 ? '-' : '+'}{formatCurrencyCompact(paiseToRupees(Math.abs(cf.amount)))}
                             </td>
-                            <td style={{ padding: '12px 20px' }} className="text-sm" >{cf.roundName || '—'}</td>
-                            <td style={{ padding: '12px 20px', maxWidth: 200 }} className="text-xs" >{cf.notes || '—'}</td>
+                            <td style={{ padding: '12px 20px' }} className="text-sm">{cf.roundName || '—'}</td>
+                            <td style={{ padding: '12px 20px', maxWidth: 200 }} className="text-xs">{cf.notes || '—'}</td>
+                            <td style={{ padding: '12px 14px' }}>
+                                <div className="flex items-center gap-1">
+                                    <button onClick={() => setEditingCf(cf)} className="p-1.5 rounded-lg" style={{ color: 'var(--color-text-muted)' }} title="Edit">
+                                        <Edit3 size={13} />
+                                    </button>
+                                    <button onClick={() => setDeletingCf(cf)} className="p-1.5 rounded-lg" style={{ color: 'var(--color-red, #ef4444)' }} title="Delete">
+                                        <Trash2 size={13} />
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                     ))}
+                    {(!startup.cashflows || startup.cashflows.length === 0) && (
+                        <tr><td colSpan={6} className="text-center text-sm py-6" style={{ color: 'var(--color-text-muted)' }}>No cashflow entries</td></tr>
+                    )}
                 </tbody>
             </table>
+            {showAddModal && <AddCashflowModal onClose={() => setShowAddModal(false)} onSubmit={(d: any) => addMutation.mutate(d)} isLoading={addMutation.isPending} />}
+            {editingCf && <EditCashflowModal cashflow={editingCf} onClose={() => setEditingCf(null)} onSubmit={(d: any) => editMutation.mutate({ cfId: editingCf.id || editingCf._id, data: d })} isLoading={editMutation.isPending} />}
+            {deletingCf && <DeleteCashflowConfirm cashflow={deletingCf} onClose={() => setDeletingCf(null)} onConfirm={(reason: string) => deleteMutation.mutate({ cfId: deletingCf.id || deletingCf._id, reason })} isLoading={deleteMutation.isPending} />}
         </div>
     );
 }
@@ -992,6 +1098,320 @@ function FollowOnModal({ onClose, onSubmit, isLoading }: any) {
                         <button type="submit" disabled={isLoading} className="btn btn-primary flex-1">{isLoading ? 'Adding...' : 'Add Follow-On'}</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    );
+}
+
+const STAGES = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'Pre-IPO'] as const;
+const SECTORS = ['FinTech', 'HealthTech', 'EdTech', 'CleanTech', 'AgriTech', 'SaaS', 'DeepTech', 'Consumer', 'Other'] as const;
+
+function EditStartupModal({ startup, onClose, onSubmit, isLoading }: { startup: any; onClose: () => void; onSubmit: (data: any) => void; isLoading: boolean }) {
+    const [form, setForm] = useState({
+        name: startup.name || '',
+        sector: startup.sector || '',
+        stage: startup.stage || '',
+        description: startup.description || '',
+        website: startup.website || '',
+        founderName: startup.founderName || '',
+        founderEmail: startup.founderEmail || '',
+        coInvestors: startup.coInvestors || '',
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        // Only send changed fields
+        const changes: Record<string, string> = {};
+        for (const [key, value] of Object.entries(form)) {
+            if (value !== (startup[key] || '')) {
+                changes[key] = value;
+            }
+        }
+        if (Object.keys(changes).length === 0) {
+            onClose();
+            return;
+        }
+        onSubmit(changes);
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh', overflowY: 'auto' }}>
+                <div className="flex items-center justify-between mb-5">
+                    <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>Edit Startup</h2>
+                    <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Company Name *</label>
+                        <input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Sector *</label>
+                            <select className="select" value={form.sector} onChange={e => setForm({ ...form, sector: e.target.value })}>
+                                {SECTORS.map(s => <option key={s}>{s}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Stage *</label>
+                            <select className="select" value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })}>
+                                {STAGES.map(s => <option key={s}>{s}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Description</label>
+                        <textarea className="input" rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Brief description of the company..." />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Website</label>
+                        <input className="input" type="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} placeholder="https://..." />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Founder Name</label>
+                            <input className="input" value={form.founderName} onChange={e => setForm({ ...form, founderName: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Founder Email</label>
+                            <input className="input" type="email" value={form.founderEmail} onChange={e => setForm({ ...form, founderEmail: e.target.value })} />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Co-Investors</label>
+                        <input className="input" value={form.coInvestors} onChange={e => setForm({ ...form, coInvestors: e.target.value })} placeholder="Comma-separated names" />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="btn btn-secondary flex-1">Cancel</button>
+                        <button type="submit" disabled={isLoading} className="btn btn-primary flex-1">{isLoading ? 'Saving...' : 'Save Changes'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+function WriteOffConfirmDialog({ startupName, onClose, onConfirm, isLoading }: { startupName: string; onClose: () => void; onConfirm: () => void; isLoading: boolean }) {
+    const [confirmText, setConfirmText] = useState('');
+    const isConfirmed = confirmText === 'WRITE OFF';
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold" style={{ color: 'var(--color-red, #ef4444)' }}>Write Off Startup</h2>
+                    <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
+                </div>
+
+                <div className="p-3 rounded-lg mb-4" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+                    <div className="flex items-start gap-2 text-sm" style={{ color: 'var(--color-red, #ef4444)' }}>
+                        <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <div>
+                            You are about to write off <strong>{startupName}</strong>. This sets the investment status to "Written Off" and marks it as a total loss for metrics calculation.
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                        Type <strong style={{ color: 'var(--color-red, #ef4444)', fontFamily: 'var(--font-mono, monospace)' }}>WRITE OFF</strong> to confirm
+                    </label>
+                    <input
+                        className="input"
+                        value={confirmText}
+                        onChange={e => setConfirmText(e.target.value)}
+                        placeholder="WRITE OFF"
+                        autoFocus
+                    />
+                </div>
+
+                <div className="flex gap-3">
+                    <button type="button" onClick={onClose} className="btn btn-secondary flex-1">Cancel</button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={!isConfirmed || isLoading}
+                        className="btn flex-1"
+                        style={{
+                            background: isConfirmed ? 'var(--color-red, #ef4444)' : 'rgba(239,68,68,0.3)',
+                            color: '#fff',
+                            cursor: isConfirmed ? 'pointer' : 'not-allowed',
+                            opacity: isConfirmed ? 1 : 0.5,
+                        }}
+                    >
+                        {isLoading ? 'Writing Off...' : 'Write Off Startup'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const CF_TYPES = [
+    { value: 'investment', label: 'Investment (outflow)' },
+    { value: 'follow_on', label: 'Follow-On (outflow)' },
+    { value: 'exit', label: 'Exit (inflow)' },
+    { value: 'correction', label: 'Correction (manual)' },
+] as const;
+
+function AddCashflowModal({ onClose, onSubmit, isLoading }: { onClose: () => void; onSubmit: (data: any) => void; isLoading: boolean }) {
+    const [form, setForm] = useState({ amount: '', date: '', type: 'correction', roundName: '', notes: '', reason: '' });
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh', overflowY: 'auto' }}>
+                <div className="flex items-center justify-between mb-5">
+                    <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>Add Ledger Entry</h2>
+                    <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
+                </div>
+                <form onSubmit={e => { e.preventDefault(); onSubmit({ ...form, amount: parseFloat(form.amount) }); }} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Type *</label>
+                            <select className="select" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                                {CF_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Amount (₹) *</label>
+                            <input type="number" className="input" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required min="0" step="any" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Date *</label>
+                            <input type="date" className="input" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Round Name</label>
+                            <input className="input" value={form.roundName} onChange={e => setForm({ ...form, roundName: e.target.value })} placeholder="e.g. Series A" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Notes</label>
+                        <textarea className="input" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Reason for Entry</label>
+                        <input className="input" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Recorded in audit trail" />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="btn btn-secondary flex-1">Cancel</button>
+                        <button type="submit" disabled={isLoading} className="btn btn-primary flex-1">{isLoading ? 'Adding...' : 'Add Entry'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+function EditCashflowModal({ cashflow, onClose, onSubmit, isLoading }: { cashflow: any; onClose: () => void; onSubmit: (data: any) => void; isLoading: boolean }) {
+    const [form, setForm] = useState({
+        amount: String(paiseToRupees(Math.abs(cashflow.amount))),
+        date: cashflow.date ? new Date(cashflow.date).toISOString().split('T')[0] : '',
+        type: cashflow.type || 'correction',
+        roundName: cashflow.roundName || '',
+        notes: cashflow.notes || '',
+        reason: '',
+    });
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh', overflowY: 'auto' }}>
+                <div className="flex items-center justify-between mb-5">
+                    <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>Edit Cashflow</h2>
+                    <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
+                </div>
+                <form onSubmit={e => { e.preventDefault(); onSubmit({ ...form, amount: parseFloat(form.amount), reason: form.reason }); }} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Type</label>
+                            <select className="select" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                                {CF_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Amount (₹)</label>
+                            <input type="number" className="input" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} min="0" step="any" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Date</label>
+                            <input type="date" className="input" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Round Name</label>
+                            <input className="input" value={form.roundName} onChange={e => setForm({ ...form, roundName: e.target.value })} />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Notes</label>
+                        <textarea className="input" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-red, #ef4444)' }}>Reason for Change *</label>
+                        <input className="input" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} required placeholder="Required — recorded in audit trail" />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="btn btn-secondary flex-1">Cancel</button>
+                        <button type="submit" disabled={isLoading || !form.reason.trim()} className="btn btn-primary flex-1">{isLoading ? 'Saving...' : 'Save Changes'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+function DeleteCashflowConfirm({ cashflow, onClose, onConfirm, isLoading }: { cashflow: any; onClose: () => void; onConfirm: (reason: string) => void; isLoading: boolean }) {
+    const [reason, setReason] = useState('');
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold" style={{ color: 'var(--color-red, #ef4444)' }}>Delete Cashflow Entry</h2>
+                    <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--color-text-muted)' }}><X size={18} /></button>
+                </div>
+
+                <div className="p-3 rounded-lg mb-4" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+                    <div className="flex items-start gap-2 text-sm" style={{ color: 'var(--color-red, #ef4444)' }}>
+                        <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <div>
+                            Deleting this <strong>{cashflow.type?.replace('_', ' ')}</strong> entry of <strong>{formatCurrencyCompact(paiseToRupees(Math.abs(cashflow.amount)))}</strong> will permanently remove it and recompute all metrics.
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                        Reason for deletion <span style={{ color: 'var(--color-red, #ef4444)' }}>*</span>
+                    </label>
+                    <input
+                        className="input"
+                        value={reason}
+                        onChange={e => setReason(e.target.value)}
+                        placeholder="Required — recorded in audit trail"
+                        autoFocus
+                    />
+                </div>
+
+                <div className="flex gap-3">
+                    <button type="button" onClick={onClose} className="btn btn-secondary flex-1">Cancel</button>
+                    <button
+                        onClick={() => onConfirm(reason)}
+                        disabled={!reason.trim() || isLoading}
+                        className="btn flex-1"
+                        style={{
+                            background: reason.trim() ? 'var(--color-red, #ef4444)' : 'rgba(239,68,68,0.3)',
+                            color: '#fff',
+                            cursor: reason.trim() ? 'pointer' : 'not-allowed',
+                            opacity: reason.trim() ? 1 : 0.5,
+                        }}
+                    >
+                        {isLoading ? 'Deleting...' : 'Delete Entry'}
+                    </button>
+                </div>
             </div>
         </div>
     );

@@ -65,3 +65,27 @@ export const alertConfigSchema = z.object({
     irrNegativeThresholdPct: z.number().optional(),
     moicWarningThreshold: z.number().min(0).optional(),
 });
+
+// ── Cashflow ledger schemas ──
+
+export const addCashflowSchema = z.object({
+    amount: z.number().positive('Amount must be positive'),
+    date: z.string().refine(d => !isNaN(Date.parse(d)), 'Invalid date'),
+    type: z.enum(['investment', 'follow_on', 'exit', 'correction']),
+    roundName: z.string().max(200).optional(),
+    notes: z.string().max(1000).optional(),
+    reason: z.string().max(500).optional(),
+});
+
+export const updateCashflowSchema = z.object({
+    amount: z.number().positive('Amount must be positive').optional(),
+    date: z.string().refine(d => !isNaN(Date.parse(d)), 'Invalid date').optional(),
+    type: z.enum(['investment', 'follow_on', 'exit', 'correction']).optional(),
+    roundName: z.string().max(200).optional(),
+    notes: z.string().max(1000).optional(),
+    reason: z.string().min(1, 'Reason is required for audit trail').max(500),
+});
+
+export const deleteCashflowSchema = z.object({
+    reason: z.string().min(1, 'Reason is required for audit trail').max(500),
+});

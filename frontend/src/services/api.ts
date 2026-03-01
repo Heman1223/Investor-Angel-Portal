@@ -124,6 +124,12 @@ export const cashflowsAPI = {
     getForStartup: (startupId: string) =>
         api.get(`/startups/${startupId}/cashflows`),
     getAll: () => api.get('/cashflows'),
+    add: (startupId: string, data: { amount: number; date: string; type: string; roundName?: string; notes?: string; reason?: string }) =>
+        api.post(`/startups/${startupId}/cashflows`, data),
+    update: (startupId: string, cfId: string, data: { amount?: number; date?: string; type?: string; roundName?: string; notes?: string; reason: string }) =>
+        api.put(`/startups/${startupId}/cashflows/${cfId}`, data),
+    delete: (startupId: string, cfId: string, reason: string) =>
+        api.delete(`/startups/${startupId}/cashflows/${cfId}`, { data: { reason } }),
 };
 
 // Alerts
@@ -163,4 +169,11 @@ export const settingsAPI = {
 export const reportsAPI = {
     portfolioPDF: () => api.post('/reports/portfolio', {}, { responseType: 'blob' }),
     startupPDF: (startupId: string) => api.post(`/reports/startup/${startupId}`, {}, { responseType: 'blob' }),
+};
+
+// CSV Export
+export const exportAPI = {
+    portfolioCSV: () => api.get('/export/portfolio.csv', { responseType: 'blob' }),
+    cashflowsCSV: (startupId?: string) =>
+        api.get('/export/cashflows.csv', { params: startupId ? { startupId } : {}, responseType: 'blob' }),
 };

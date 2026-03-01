@@ -13,6 +13,7 @@ import alertRoutes from './routes/alert.routes';
 import documentRoutes from './routes/document.routes';
 import settingsRoutes from './routes/settings.routes';
 import reportRoutes from './routes/report.routes';
+import exportRoutes from './routes/export.routes';
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/export', exportRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

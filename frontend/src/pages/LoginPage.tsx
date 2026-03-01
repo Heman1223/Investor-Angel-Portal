@@ -654,8 +654,8 @@ export default function LoginPage() {
               </svg>
             </div>
             <div>
-              <div className="mc-brand-name">MERIDIAN</div>
-              <div className="mc-brand-sub">CAPITAL PARTNERS</div>
+              <div className="mc-brand-name">ANGEL</div>
+              <div className="mc-brand-sub">INVESTOR PORTFOLIO</div>
             </div>
           </div>
 
@@ -862,7 +862,7 @@ export default function LoginPage() {
 
       {/* FOOTER */}
       <div className="mc-footer">
-        <span>© 2026 Meridian Capital Partners LLP. All rights reserved.</span>
+        <span>© 2026 Angel Investor Portfolio. All rights reserved.</span>
         <div className="mc-footer-links">
           <a href="#">Privacy Policy</a>
           <a href="#">Terms of Use</a>

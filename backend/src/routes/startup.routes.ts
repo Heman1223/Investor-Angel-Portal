@@ -30,6 +30,9 @@ router.post('/:id/updates', updatesController.createUpdate);
 
 // Cashflows (nested under startup)
 router.get('/:id/cashflows', cashflowsController.getStartupCashflows);
+router.post('/:id/cashflows', cashflowsController.addCashflow);
+router.put('/:id/cashflows/:cfId', cashflowsController.updateCashflow);
+router.delete('/:id/cashflows/:cfId', cashflowsController.deleteCashflow);
 
 // Documents (nested under startup)
 router.get('/:id/documents', documentsController.getDocuments);

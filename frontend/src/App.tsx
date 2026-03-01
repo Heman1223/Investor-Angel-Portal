@@ -11,6 +11,7 @@ import DocumentsPage from './pages/DocumentsPage';
 import SettingsPage from './pages/SettingsPage';
 import ComparisonPage from './pages/ComparisonPage';
 import ReportsPage from './pages/ReportsPage';
+import ScenarioPage from './pages/ScenarioPage';
 import './index.css';
 import MainLayout from './components/layout/Layouts';
 
@@ -30,7 +31,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg-primary)' }}>
-        <div className="animate-pulse" style={{ fontFamily: "var(--font-mono, 'IBM Plex Mono', monospace)", fontSize: 16, letterSpacing: '0.24em', color: 'var(--color-primary)', fontWeight: 600 }}>MERIDIAN</div>
+        <div className="animate-pulse" style={{ fontFamily: "var(--font-mono, 'IBM Plex Mono', monospace)", fontSize: 16, letterSpacing: '0.24em', color: 'var(--color-primary)', fontWeight: 600 }}>ANGEL</div>
       </div>
     );
   }
@@ -51,6 +52,7 @@ function AppRoutes() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="compare" element={<ComparisonPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="scenarios" element={<ScenarioPage />} />
       </Route>
     </Routes>
   );
