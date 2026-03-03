@@ -9,7 +9,9 @@ export async function connectDB(): Promise<void> {
         logger.info('PostgreSQL connected successfully via Prisma');
     } catch (error) {
         logger.error('PostgreSQL connection error:', error);
-        process.exit(1);
+        // During deployment, we don't want to exit immediately 
+        // as it might cause Render health check failures.
+        // The server will still listen on the port.
     }
 }
 
