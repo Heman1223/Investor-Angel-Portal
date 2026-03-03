@@ -49,6 +49,11 @@ app.get('/api/health', (_req, res) => {
     res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
 });
 
+// Root route
+app.get('/', (_req, res) => {
+    res.send('PortfolioOS Backend API is running');
+});
+
 // Global error handler
 app.use(errorHandler);
 
