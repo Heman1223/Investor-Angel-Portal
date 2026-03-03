@@ -4,6 +4,7 @@ const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
     withCredentials: true,
     headers: { 'Content-Type': 'application/json' },
+    timeout: 15000, // 15s timeout
 });
 
 // Request interceptor — attach access token
@@ -35,7 +36,7 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry && !(originalRequest as any)._isRefresh) {
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -49,7 +50,9 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const { data } = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+                // Use the api instance itself so it gets the correct baseURL
+                // but pass a flag to avoid infinite loops if it 401s
+                const { data } = await api.post('/auth/refresh', {}, { _isRefresh: true } as any);
                 const newToken = data.data.accessToken;
                 sessionStorage.setItem('accessToken', newToken);
                 processQueue(null, newToken);

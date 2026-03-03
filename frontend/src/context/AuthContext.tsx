@@ -116,18 +116,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const checkAuth = useCallback(async () => {
         try {
+            console.log('[Auth] Checking session...');
             const token = sessionStorage.getItem('accessToken');
             if (!token) {
-                // Try refresh
+                console.log('[Auth] No token found, trying refresh...');
                 const refreshRes = await authAPI.refresh();
-                sessionStorage.setItem('accessToken', refreshRes.data.data.accessToken);
+                if (refreshRes.data?.data?.accessToken) {
+                    console.log('[Auth] Refresh successful');
+                    sessionStorage.setItem('accessToken', refreshRes.data.data.accessToken);
+                }
             }
             const res = await authAPI.me();
+            console.log('[Auth] User verified:', res.data.data?.email);
             setInvestor(res.data.data);
-        } catch {
+        } catch (err: any) {
+            console.error('[Auth] Verification failed:', err.message);
             setInvestor(null);
             sessionStorage.removeItem('accessToken');
         } finally {
+            console.log('[Auth] Loading cleared');
             setIsLoading(false);
         }
     }, []);
