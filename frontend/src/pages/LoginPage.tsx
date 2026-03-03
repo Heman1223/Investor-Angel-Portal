@@ -714,12 +714,10 @@ export default function LoginPage() {
             {showSignup ? (
               <SignupCard
                 onBack={() => setShowSignup(false)}
-                onSuccess={(accessToken, investor) => {
+                onSuccess={(accessToken) => {
                   sessionStorage.setItem('accessToken', accessToken);
-                  login(investor.email, '').catch(() => {
-                    // Already registered, just navigate
-                    window.location.href = '/';
-                  });
+                  // Refresh to let AuthContext pick up the session
+                  window.location.reload(); 
                 }}
               />
             ) : showForgot ? (

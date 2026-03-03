@@ -114,7 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
     }, [investor, resetInactivityTimer, clearInactivityTimers]);
 
+    const checkAuthCalledRef = useRef(false);
+
     const checkAuth = useCallback(async () => {
+        if (checkAuthCalledRef.current) return;
+        checkAuthCalledRef.current = true;
+        
         try {
             console.log('[Auth] Checking session...');
             const token = sessionStorage.getItem('accessToken');
