@@ -22,7 +22,6 @@ export default function AlertsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['alerts'] });
             queryClient.invalidateQueries({ queryKey: ['unreadAlerts'] });
-            queryClient.invalidateQueries({ queryKey: ['alerts', 'unread'] });
             toast.success('Alert marked as read');
         },
     });
@@ -32,7 +31,6 @@ export default function AlertsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['alerts'] });
             queryClient.invalidateQueries({ queryKey: ['unreadAlerts'] });
-            queryClient.invalidateQueries({ queryKey: ['alerts', 'unread'] });
             toast.success('All alerts marked as read');
         },
     });

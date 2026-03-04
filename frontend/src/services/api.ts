@@ -3,7 +3,6 @@ import axios from 'axios';
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
     withCredentials: true,
-    headers: { 'Content-Type': 'application/json' },
     timeout: 15000, // 15s timeout
 });
 
@@ -151,14 +150,11 @@ export const documentsAPI = {
         api.get(`/startups/${startupId}/documents`),
     getAll: () => api.get('/documents'),
     upload: (startupId: string, formData: FormData) =>
-        api.post(`/startups/${startupId}/documents`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        }),
+        api.post(`/startups/${startupId}/documents`, formData),
     uploadGeneral: (formData: FormData) =>
-        api.post('/documents/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        }),
+        api.post('/documents/upload', formData),
     download: (id: string) => api.get(`/documents/${id}/download`),
+    downloadRawFile: (id: string) => api.get(`/documents/${id}/file`, { responseType: 'blob' }),
     delete: (id: string) => api.delete(`/documents/${id}`),
     update: (id: string, data: { fileName?: string; startupId?: string | null; documentType?: string }) =>
         api.put(`/documents/${id}`, data),

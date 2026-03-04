@@ -5,7 +5,7 @@ import { Search, Bell, LogOut, Settings, ChevronDown, X, Command, Menu } from 'l
 import { useAuth } from '../../context/AuthContext';
 import { useMobileMenu } from '../../context/MobileMenuContext';
 import { useQuery } from '@tanstack/react-query';
-import { startupsAPI } from '../../services/api';
+import { startupsAPI, alertsAPI } from '../../services/api';
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
     '/': { title: 'Portfolio Overview', sub: 'All investments · Real-time performance' },
@@ -95,7 +95,15 @@ export default function Header() {
     const location = useLocation();
     const [userOpen, setUserOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
-    const [notifs] = useState(3);
+    const { data: alerts } = useQuery({
+        queryKey: ['unreadAlerts'],
+        queryFn: async () => {
+            const res = await alertsAPI.getAll(false);
+            return res.data.data;
+        }
+    });
+
+    const notifs = alerts?.length || 0;
     const { toggle: toggleMobile } = useMobileMenu();
 
     const meta = PAGE_META[location.pathname] || { title: 'Portfolio', sub: '' };

@@ -114,6 +114,23 @@ export default function DocumentsPage() {
         },
     });
 
+    const handleDownload = async (id: string, fileName: string) => {
+        try {
+            const fileRes = await documentsAPI.downloadRawFile(id);
+            const blob = new Blob([fileRes.data], { type: fileRes.headers['content-type'] });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err: any) {
+            toast.error('Failed to download file');
+        }
+    };
+
     const filteredDocs = (documents || []).filter((doc: any) => {
         if (!search.trim()) return true;
         const q = search.toLowerCase();
@@ -248,8 +265,8 @@ export default function DocumentsPage() {
                                                 <td style={{ padding: '14px 20px', fontSize: 12, color: 'var(--color-text-muted)' }}>
                                                     {(doc.fileSizeBytes / 1024).toFixed(0)} KB
                                                 </td>
-                                                <td style={{ padding: '14px 20px', fontSize: 12, color: 'var(--color-text-muted)' }}>
-                                                    {formatDate(doc.uploadedAt)}
+                                                <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                                                    {formatDate(doc.uploadedAt || doc.createdAt || doc.uploaded_at || doc.date)}
                                                 </td>
                                                 <td style={{ padding: '14px 20px' }}>
                                                     <div style={{ display: 'flex', gap: 4 }}>
@@ -261,7 +278,9 @@ export default function DocumentsPage() {
                                                             style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}>
                                                             <Link2 size={14} />
                                                         </button>
-                                                        <button title="Download document"
+                                                        <button
+                                                            title="Download document"
+                                                            onClick={() => handleDownload(doc._id || doc.id, doc.fileName)}
                                                             style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}>
                                                             <Download size={14} />
                                                         </button>
@@ -440,7 +459,11 @@ export default function DocumentsPage() {
                                         className="input"
                                         onChange={e => setUploadData({ ...uploadData, file: e.target.files?.[0] || null })}
                                         style={{ padding: '8px 12px' }}
+                                        accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.csv"
                                     />
+                                    <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 6, opacity: 0.8 }}>
+                                        Max size: <strong>25MB</strong>. Supported: PDF, Images, Word, Excel, CSV.
+                                    </p>
                                 </div>
 
                                 <button

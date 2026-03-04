@@ -4,7 +4,19 @@ import { FileText, Download, Loader2, Building2, Briefcase, Table2, FileSpreadsh
 import { startupsAPI, reportsAPI, exportAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
-function downloadBlob(blob: Blob, filename: string) {
+async function downloadBlob(blob: Blob, filename: string) {
+    // If the blob is very small and likely contains a JSON error, try to parse it
+    if (blob.size < 1000 && blob.type === 'application/json') {
+        const text = await blob.text();
+        try {
+            const json = JSON.parse(text);
+            if (json.success === false) {
+                toast.error(json.error?.message || 'Download failed');
+                return;
+            }
+        } catch { /* ignore */ }
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

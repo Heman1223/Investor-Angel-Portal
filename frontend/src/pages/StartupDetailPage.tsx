@@ -50,13 +50,27 @@ export default function StartupDetailPage() {
     });
 
     const { data: documents } = useQuery({
-        queryKey: ['startupDocuments', id],
-        queryFn: async () => {
-            const res = await documentsAPI.getForStartup(id!);
-            return res.data.data;
-        },
-        enabled: !!id,
+        queryKey: ['startup-documents', id],
+        queryFn: () => documentsAPI.getForStartup(id!).then(res => res.data.data),
+        enabled: !!id
     });
+
+    const handleDownload = async (docId: string, fileName: string) => {
+        try {
+            const fileRes = await documentsAPI.downloadRawFile(docId);
+            const blob = new Blob([fileRes.data], { type: fileRes.headers['content-type'] });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err: any) {
+            toast.error('Failed to download file');
+        }
+    };
 
     const updateMutation = useMutation({
         mutationFn: (data: any) => updatesAPI.create(id!, data),
@@ -330,7 +344,7 @@ export default function StartupDetailPage() {
 
             {/* Tab Content */}
             {activeTab === 'overview' && (
-                <OverviewTab startup={s} updates={updates} documents={documents} navigate={navigate} />
+                <OverviewTab startup={s} updates={updates} documents={documents} navigate={navigate} handleDownload={handleDownload} />
             )}
 
             {activeTab === 'cashflows' && (
@@ -346,7 +360,7 @@ export default function StartupDetailPage() {
             )}
 
             {activeTab === 'documents' && (
-                <DocumentsTab documents={documents} />
+                <DocumentsTab documents={documents || []} handleDownload={handleDownload} />
             )}
 
             {activeTab === 'notes' && (
@@ -390,7 +404,7 @@ export default function StartupDetailPage() {
    Tab Components
    ═══════════════════════════════════════════════════════════════ */
 
-function OverviewTab({ startup, updates, documents }: any) {
+function OverviewTab({ startup, updates, documents, handleDownload }: any) {
     const s = startup;
 
     // Build chart data from cashflows
@@ -545,10 +559,14 @@ function OverviewTab({ startup, updates, documents }: any) {
                                             {doc.fileName}
                                         </p>
                                         <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                                            Added {formatDate(doc.uploadedAt)} · {(doc.fileSizeBytes / 1024).toFixed(0)} KB
+                                            Added {formatDate(doc.uploadedAt || doc.createdAt || doc.uploaded_at)} · {(doc.fileSizeBytes / 1024).toFixed(0)} KB
                                         </p>
                                     </div>
-                                    <button className="p-1.5 rounded-lg" style={{ color: 'var(--color-text-muted)' }}>
+                                    <button
+                                        className="p-1.5 rounded-lg"
+                                        style={{ color: 'var(--color-text-muted)' }}
+                                        onClick={() => handleDownload(doc._id || doc.id, doc.fileName)}
+                                    >
                                         <Download size={14} />
                                     </button>
                                 </div>
@@ -726,7 +744,7 @@ function UpdatesTab({ updates, onAddUpdate, isActive }: { updates: any[]; onAddU
     );
 }
 
-function DocumentsTab({ documents }: { documents: any[] }) {
+function DocumentsTab({ documents, handleDownload }: { documents: any[], handleDownload: (docId: string, fileName: string) => Promise<void> }) {
     if (!documents || documents.length === 0) {
         return (
             <div className="card text-center py-10" style={{ color: 'var(--color-text-muted)' }}>
@@ -751,10 +769,14 @@ function DocumentsTab({ documents }: { documents: any[] }) {
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{doc.fileName}</p>
                         <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                            {formatDate(doc.uploadedAt)} · {(doc.fileSizeBytes / 1024).toFixed(0)} KB
+                            {formatDate(doc.uploadedAt || doc.createdAt || doc.uploaded_at)} · {(doc.fileSizeBytes / 1024).toFixed(0)} KB
                         </p>
                     </div>
-                    <button className="p-2 rounded-lg" style={{ color: 'var(--color-text-muted)' }}>
+                    <button
+                        className="p-2 rounded-lg"
+                        style={{ color: 'var(--color-text-muted)' }}
+                        onClick={() => handleDownload(doc._id || doc.id, doc.fileName)}
+                    >
                         <Download size={16} />
                     </button>
                 </div>
