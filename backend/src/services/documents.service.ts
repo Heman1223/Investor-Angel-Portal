@@ -36,31 +36,34 @@ export async function getAllDocuments(investorId: string) {
         const { startup, ...rest } = doc;
         return {
             ...rest,
-            // Replicate Mongoose `.populate('startupId', 'name')` behavior
             startupId: startup ? {
                 _id: startup.id,
                 name: startup.name
-            } : doc.startupId
+            } : null
         };
     });
 }
 
 export async function uploadDocument(
     investorId: string,
-    startupId: string,
+    startupId: string | null,
     file: Express.Multer.File,
     documentType: string,
     description?: string
 ) {
-    const startup = await prisma.startup.findFirst({
-        where: { id: startupId, investorId }
-    });
-    if (!startup) {
-        throw createAppError('Startup not found', 404, 'NOT_FOUND');
+    // If startupId provided, validate it belongs to investor
+    if (startupId) {
+        const startup = await prisma.startup.findFirst({
+            where: { id: startupId, investorId }
+        });
+        if (!startup) {
+            throw createAppError('Startup not found', 404, 'NOT_FOUND');
+        }
     }
 
-    const fileKey = `${startupId}/${uuidv4()}-${file.originalname}`;
-    const filePath = path.join(UPLOAD_DIR, startupId.toString());
+    const folder = startupId || 'general';
+    const fileKey = `${folder}/${uuidv4()}-${file.originalname}`;
+    const filePath = path.join(UPLOAD_DIR, folder);
 
     if (!fs.existsSync(filePath)) {
         fs.mkdirSync(filePath, { recursive: true });
@@ -68,18 +71,22 @@ export async function uploadDocument(
 
     fs.writeFileSync(path.join(filePath, `${uuidv4()}-${file.originalname}`), file.buffer);
 
+    const createData: Record<string, unknown> = {
+        investorId,
+        fileName: file.originalname,
+        fileKey,
+        fileSizeBytes: file.size,
+        mimeType: file.mimetype,
+        documentType,
+        description,
+        uploadedBy: investorId,
+    };
+    if (startupId) {
+        createData.startupId = startupId;
+    }
+
     const doc = await prisma.document.create({
-        data: {
-            startupId,
-            investorId,
-            fileName: file.originalname,
-            fileKey,
-            fileSizeBytes: file.size,
-            mimeType: file.mimetype,
-            documentType,
-            description,
-            uploadedBy: investorId,
-        }
+        data: createData as any
     });
 
     return doc;
@@ -93,7 +100,6 @@ export async function getDownloadUrl(investorId: string, documentId: string) {
         throw createAppError('Document not found', 404, 'NOT_FOUND');
     }
 
-    // In production, generate a signed S3 URL. For dev, return the file path.
     return {
         fileName: doc.fileName,
         mimeType: doc.mimeType,
@@ -116,4 +122,44 @@ export async function archiveDocument(investorId: string, documentId: string) {
     });
 
     return updatedDoc;
+}
+
+export async function updateDocument(
+    investorId: string,
+    documentId: string,
+    data: { fileName?: string; startupId?: string | null; documentType?: string }
+) {
+    const doc = await prisma.document.findFirst({
+        where: { id: documentId, investorId }
+    });
+    if (!doc) {
+        throw createAppError('Document not found', 404, 'NOT_FOUND');
+    }
+
+    // If re-linking to a startup, validate ownership
+    if (data.startupId !== undefined && data.startupId !== null) {
+        const startup = await prisma.startup.findFirst({
+            where: { id: data.startupId, investorId }
+        });
+        if (!startup) {
+            throw createAppError('Startup not found', 404, 'NOT_FOUND');
+        }
+    }
+
+    const updateData: any = {};
+    if (data.fileName !== undefined) updateData.fileName = data.fileName;
+    if (data.startupId !== undefined) updateData.startupId = data.startupId;
+    if (data.documentType !== undefined) updateData.documentType = data.documentType;
+
+    const updatedDoc = await prisma.document.update({
+        where: { id: documentId },
+        data: updateData,
+        include: { startup: { select: { id: true, name: true } } }
+    });
+
+    const { startup, ...rest } = updatedDoc;
+    return {
+        ...rest,
+        startupId: startup ? { _id: startup.id, name: startup.name } : null
+    };
 }

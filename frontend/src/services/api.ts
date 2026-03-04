@@ -154,8 +154,14 @@ export const documentsAPI = {
         api.post(`/startups/${startupId}/documents`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         }),
+    uploadGeneral: (formData: FormData) =>
+        api.post('/documents/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }),
     download: (id: string) => api.get(`/documents/${id}/download`),
     delete: (id: string) => api.delete(`/documents/${id}`),
+    update: (id: string, data: { fileName?: string; startupId?: string | null; documentType?: string }) =>
+        api.put(`/documents/${id}`, data),
 };
 
 // Settings

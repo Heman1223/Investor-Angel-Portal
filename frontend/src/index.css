@@ -378,3 +378,44 @@ tbody tr:hover { background: rgba(197,164,84,0.04); }
 ::-webkit-scrollbar-thumb { background: rgba(197,164,84,0.15); border-radius: 4px; border: 2px solid var(--navy); }
 ::-webkit-scrollbar-thumb:hover { background: rgba(197,164,84,0.3); }
 * { scrollbar-width: thin; scrollbar-color: rgba(197,164,84,0.15) var(--navy); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Mobile Responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Tables: horizontal scroll on small screens */
+@media (max-width: 768px) {
+  table { min-width: 600px; }
+
+  th { padding: 10px 12px; font-size: 9px; }
+  td { padding: 10px 12px; font-size: 13px; }
+
+  /* Cards */
+  .card { padding: 16px; border-radius: var(--radius-md); }
+
+  /* Modals */
+  .modal-content {
+    width: 95%;
+    max-width: none;
+    margin: 16px;
+    padding: 20px;
+    border-radius: var(--radius-lg);
+  }
+
+  /* Buttons */
+  .btn { padding: 8px 16px; font-size: 13px; }
+
+  /* Typography */
+  h1 { font-size: 20px !important; }
+  h2 { font-size: 18px !important; }
+  h3 { font-size: 16px !important; }
+
+  /* Inputs */
+  .input, .select { font-size: 16px; }
+}
+
+@media (max-width: 480px) {
+  .btn { padding: 8px 12px; font-size: 12px; }
+  .badge { font-size: 10px; padding: 2px 6px; }
+}
+

@@ -3,9 +3,10 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
     LayoutDashboard, Rocket, FolderOpen, FileText,
-    Settings, Plus, TrendingUp, ChevronRight, BarChart3, Zap, GitCompare, Bell, Calculator
+    Settings, Plus, TrendingUp, ChevronRight, BarChart3, Zap, GitCompare, Bell, Calculator, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useMobileMenu } from '../../context/MobileMenuContext';
 import { dashboardAPI, alertsAPI } from '../../services/api';
 import { formatCurrencyCompact, paiseToRupees } from '../../utils/formatters';
 
@@ -30,6 +31,7 @@ export default function Sidebar() {
     const { investor } = useAuth();
     const location = useLocation();
     const [collapsed, setCollapsed] = useState(false);
+    const { isOpen: mobileOpen, close: closeMobile } = useMobileMenu();
 
     // Fetch real portfolio data
     const { data: dashboard } = useQuery({
@@ -74,128 +76,151 @@ export default function Sidebar() {
         ? investor.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
         : 'MP';
 
+    const handleNavClick = () => {
+        closeMobile();
+    };
+
+    const sidebarContent = (
+        <>
+            {/* Brand */}
+            <div className="sb-brand">
+                <div className="sb-logo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <polygon points="12,2 22,8 22,16 12,22 2,16 2,8" stroke="#C5A454" strokeWidth="1.5" fill="none" />
+                        <circle cx="12" cy="12" r="2" fill="#C5A454" />
+                    </svg>
+                </div>
+                {!collapsed && (
+                    <div className="sb-brand-text">
+                        <span className="sb-brand-name">ANGEL</span>
+                        <span className="sb-brand-sub">Investor Portfolio</span>
+                    </div>
+                )}
+                {/* Desktop collapse toggle */}
+                <button className={`sb-toggle sb-desktop-only ${collapsed ? 'sb-toggle-collapsed' : ''}`} onClick={() => setCollapsed(!collapsed)} title={collapsed ? 'Expand' : 'Collapse'}>
+                    <ChevronRight size={12} strokeWidth={2.5}
+                        style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.25s' }} />
+                </button>
+                {/* Mobile close button */}
+                <button className="sb-mobile-close sb-mobile-only" onClick={closeMobile} title="Close menu">
+                    <X size={18} strokeWidth={2} />
+                </button>
+            </div>
+            {/* Scrollable main area */}
+            <div className="sb-main">
+                {/* NAV value card */}
+                {!collapsed && (
+                    <div className="sb-nav-card">
+                        <div className="sb-nav-card-top">
+                            <div>
+                                <p className="sb-nav-card-lbl">Portfolio NAV</p>
+                                <p className="sb-nav-card-val">
+                                    {portfolioValue > 0 ? formatCurrencyCompact(portfolioValue) : '₹0'}
+                                </p>
+                            </div>
+                            {portfolioValue > 0 && (
+                                <div className="sb-nav-card-badge" style={!moicPositive ? { color: '#F87171', background: 'rgba(248,113,113,0.1)', borderColor: 'rgba(248,113,113,0.18)' } : undefined}>
+                                    <Zap size={9} strokeWidth={3} /> {moicPositive ? '+' : ''}{moicChange}
+                                </div>
+                            )}
+                        </div>
+                        <MiniChart />
+                    </div>
+                )}
+
+                {/* Navigation */}
+                <nav className="sb-nav">
+                    {!collapsed && <p className="sb-nav-lbl">Menu</p>}
+                    {NAV.map(item => {
+                        const isActive = item.end
+                            ? location.pathname === item.to
+                            : location.pathname.startsWith(item.to);
+                        return (
+                            <NavLink key={item.to} to={item.to} end={item.end} style={{ textDecoration: 'none' }} onClick={handleNavClick}>
+                                <div className={`sb-item ${isActive ? 'active' : ''}`} title={collapsed ? item.label : undefined}>
+                                    <div className="sb-item-left">
+                                        <item.icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
+                                        {!collapsed && <span className="sb-item-lbl">{item.label}</span>}
+                                    </div>
+                                    {!collapsed && item.badge && <span className="sb-badge">{item.badge}</span>}
+                                    {collapsed && item.badge && <span className="sb-badge-pip" />}
+                                </div>
+                            </NavLink>
+                        );
+                    })}
+                </nav>
+
+                {/* Quick metrics */}
+                {!collapsed && (
+                    <div className="sb-metrics">
+                        <p className="sb-nav-lbl">Quick View</p>
+                        <div className="sb-metrics-row">
+                            <div className="sb-metric">
+                                <BarChart3 size={14} color="#C5A454" strokeWidth={2} />
+                                <div>
+                                    <p className="sb-metric-val">{activeCount}</p>
+                                    <p className="sb-metric-lbl">Active</p>
+                                </div>
+                            </div>
+                            <div className="sb-metric-sep" />
+                            <div className="sb-metric">
+                                <TrendingUp size={14} color="#60A5FA" strokeWidth={2} />
+                                <div>
+                                    <p className="sb-metric-val">{exitedCount}</p>
+                                    <p className="sb-metric-lbl">Exits</p>
+                                </div>
+                            </div>
+                            <div className="sb-metric-sep" />
+                            <div className="sb-metric">
+                                <Bell size={14} color="#FB923C" strokeWidth={2} />
+                                <div>
+                                    <p className="sb-metric-val">{unreadAlertCount}</p>
+                                    <p className="sb-metric-lbl">Alerts</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* New Investment */}
+            <div className="sb-cta-area">
+                <NavLink to="/portfolio" style={{ textDecoration: 'none' }} onClick={handleNavClick}>
+                    <button className={`sb-cta ${collapsed ? 'sb-cta-sm' : ''}`} title={collapsed ? 'Add Investment' : undefined}>
+                        <Plus size={18} strokeWidth={2.5} />
+                        {!collapsed && <span>Add Investment</span>}
+                    </button>
+                </NavLink>
+            </div>
+
+            {/* User */}
+            <div className={`sb-user ${collapsed ? 'sb-user-sm' : ''}`}>
+                <div className="sb-avatar">{initials}</div>
+                {!collapsed && (
+                    <div className="sb-user-info">
+                        <p className="sb-user-name">{investor?.name || 'Arjun Mehta'}</p>
+                        <p className="sb-user-role">Managing Partner</p>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+
     return (
         <>
             <style>{SB_CSS}</style>
-            <aside className={`sb-root ${collapsed ? 'sb-collapsed' : ''}`}>
-
-                {/* Brand */}
-                <div className="sb-brand">
-                    <div className="sb-logo">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <polygon points="12,2 22,8 22,16 12,22 2,16 2,8" stroke="#C5A454" strokeWidth="1.5" fill="none" />
-                            <circle cx="12" cy="12" r="2" fill="#C5A454" />
-                        </svg>
-                    </div>
-                    {!collapsed && (
-                        <div className="sb-brand-text">
-                            <span className="sb-brand-name">ANGEL</span>
-                            <span className="sb-brand-sub">Investor Portfolio</span>
-                        </div>
-                    )}
-                    <button className={`sb-toggle ${collapsed ? 'sb-toggle-collapsed' : ''}`} onClick={() => setCollapsed(!collapsed)} title={collapsed ? 'Expand' : 'Collapse'}>
-                        <ChevronRight size={12} strokeWidth={2.5}
-                            style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.25s' }} />
-                    </button>
-                </div>
-                {/* Scrollable main area */}
-                <div className="sb-main">
-                    {/* NAV value card */}
-                    {!collapsed && (
-                        <div className="sb-nav-card">
-                            <div className="sb-nav-card-top">
-                                <div>
-                                    <p className="sb-nav-card-lbl">Portfolio NAV</p>
-                                    <p className="sb-nav-card-val">
-                                        {portfolioValue > 0 ? formatCurrencyCompact(portfolioValue) : '₹0'}
-                                    </p>
-                                </div>
-                                {portfolioValue > 0 && (
-                                    <div className="sb-nav-card-badge" style={!moicPositive ? { color: '#F87171', background: 'rgba(248,113,113,0.1)', borderColor: 'rgba(248,113,113,0.18)' } : undefined}>
-                                        <Zap size={9} strokeWidth={3} /> {moicPositive ? '+' : ''}{moicChange}
-                                    </div>
-                                )}
-                            </div>
-                            <MiniChart />
-                        </div>
-                    )}
-
-                    {/* Navigation */}
-                    <nav className="sb-nav">
-                        {!collapsed && <p className="sb-nav-lbl">Menu</p>}
-                        {NAV.map(item => {
-                            const isActive = item.end
-                                ? location.pathname === item.to
-                                : location.pathname.startsWith(item.to);
-                            return (
-                                <NavLink key={item.to} to={item.to} end={item.end} style={{ textDecoration: 'none' }}>
-                                    <div className={`sb-item ${isActive ? 'active' : ''}`} title={collapsed ? item.label : undefined}>
-                                        <div className="sb-item-left">
-                                            <item.icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
-                                            {!collapsed && <span className="sb-item-lbl">{item.label}</span>}
-                                        </div>
-                                        {!collapsed && item.badge && <span className="sb-badge">{item.badge}</span>}
-                                        {collapsed && item.badge && <span className="sb-badge-pip" />}
-                                    </div>
-                                </NavLink>
-                            );
-                        })}
-                    </nav>
-
-                    {/* Quick metrics */}
-                    {!collapsed && (
-                        <div className="sb-metrics">
-                            <p className="sb-nav-lbl">Quick View</p>
-                            <div className="sb-metrics-row">
-                                <div className="sb-metric">
-                                    <BarChart3 size={14} color="#C5A454" strokeWidth={2} />
-                                    <div>
-                                        <p className="sb-metric-val">{activeCount}</p>
-                                        <p className="sb-metric-lbl">Active</p>
-                                    </div>
-                                </div>
-                                <div className="sb-metric-sep" />
-                                <div className="sb-metric">
-                                    <TrendingUp size={14} color="#60A5FA" strokeWidth={2} />
-                                    <div>
-                                        <p className="sb-metric-val">{exitedCount}</p>
-                                        <p className="sb-metric-lbl">Exits</p>
-                                    </div>
-                                </div>
-                                <div className="sb-metric-sep" />
-                                <div className="sb-metric">
-                                    <Bell size={14} color="#FB923C" strokeWidth={2} />
-                                    <div>
-                                        <p className="sb-metric-val">{unreadAlertCount}</p>
-                                        <p className="sb-metric-lbl">Alerts</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* New Investment */}
-                <div className="sb-cta-area">
-                    <NavLink to="/portfolio" style={{ textDecoration: 'none' }}>
-                        <button className={`sb-cta ${collapsed ? 'sb-cta-sm' : ''}`} title={collapsed ? 'Add Investment' : undefined}>
-                            <Plus size={18} strokeWidth={2.5} />
-                            {!collapsed && <span>Add Investment</span>}
-                        </button>
-                    </NavLink>
-                </div>
-
-                {/* User */}
-                <div className={`sb-user ${collapsed ? 'sb-user-sm' : ''}`}>
-                    <div className="sb-avatar">{initials}</div>
-                    {!collapsed && (
-                        <div className="sb-user-info">
-                            <p className="sb-user-name">{investor?.name || 'Arjun Mehta'}</p>
-                            <p className="sb-user-role">Managing Partner</p>
-                        </div>
-                    )}
-                </div>
+            {/* Desktop sidebar */}
+            <aside className={`sb-root sb-desktop-sidebar ${collapsed ? 'sb-collapsed' : ''}`}>
+                {sidebarContent}
             </aside>
+            {/* Mobile overlay */}
+            {mobileOpen && (
+                <div className="sb-mobile-backdrop" onClick={closeMobile}>
+                    <aside className="sb-root sb-mobile-sidebar" onClick={e => e.stopPropagation()}>
+                        {sidebarContent}
+                    </aside>
+                </div>
+            )}
         </>
     );
 }
@@ -217,6 +242,54 @@ const SB_CSS = `
   pointer-events:none;
 }
 .sb-collapsed{width:72px;}
+
+/* Desktop / Mobile visibility */
+.sb-desktop-only { display: flex; }
+.sb-mobile-only { display: none; }
+
+@media (max-width: 768px) {
+  .sb-desktop-sidebar { display: none !important; }
+  .sb-desktop-only { display: none !important; }
+  .sb-mobile-only { display: flex !important; }
+}
+@media (min-width: 769px) {
+  .sb-mobile-backdrop { display: none !important; }
+}
+
+/* Mobile backdrop + drawer */
+.sb-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(5,10,18,0.7);
+  backdrop-filter: blur(4px);
+  animation: sb-fade-in 0.2s ease;
+}
+@keyframes sb-fade-in { from { opacity:0; } to { opacity:1; } }
+
+.sb-mobile-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 280px;
+  max-width: 85vw;
+  z-index: 201;
+  animation: sb-slide-in 0.25s cubic-bezier(0.4,0,0.2,1);
+  border-right: 1px solid rgba(197,164,84,0.15);
+  box-shadow: 16px 0 48px rgba(0,0,0,0.6);
+}
+@keyframes sb-slide-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+.sb-mobile-close {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  align-items: center; justify-content: center;
+  cursor: pointer; color: rgba(255,255,255,0.5);
+  transition: all 0.2s; flex-shrink: 0;
+}
+.sb-mobile-close:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); }
 
 /* Scrollable main area */
 .sb-main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0;position:relative;z-index:1;}

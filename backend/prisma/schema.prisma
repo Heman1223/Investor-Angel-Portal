@@ -121,8 +121,8 @@ model DilutionEvent {
 
 model Document {
   id            String   @id @default(cuid())
-  startupId     String
-  startup       Startup  @relation(fields: [startupId], references: [id])
+  startupId     String?
+  startup       Startup?  @relation(fields: [startupId], references: [id])
   investorId    String
   investor      Investor @relation(fields: [investorId], references: [id])
   fileName      String

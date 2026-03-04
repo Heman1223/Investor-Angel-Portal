@@ -66,7 +66,9 @@ export function formatRunway(value: number | null | undefined): string {
  */
 export function formatDate(date: string | Date | null | undefined): string {
     if (!date) return '—';
-    return new Date(date).toLocaleDateString('en-IN', {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -80,6 +82,7 @@ export function formatMonth(month: string | null | undefined): string {
     if (!month) return '—';
     const [year, m] = month.split('-');
     const date = new Date(parseInt(year), parseInt(m) - 1);
+    if (isNaN(date.getTime())) return '—';
     return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 }
 

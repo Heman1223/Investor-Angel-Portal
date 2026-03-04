@@ -3,10 +3,11 @@
 // ─────────────────────────────────────────────────────────────────────────
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import { MobileMenuProvider } from '../../context/MobileMenuContext';
 
 export function Layout() {
   return (
-    <>
+    <MobileMenuProvider>
       <style>{BASE_CSS}</style>
       <div className="ml-shell">
         <Sidebar />
@@ -14,7 +15,7 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
-    </>
+    </MobileMenuProvider>
   );
 }
 
@@ -25,7 +26,7 @@ import Header from './Header';
 
 export default function MainLayout() {
   return (
-    <>
+    <MobileMenuProvider>
       <style>{BASE_CSS}</style>
       <div className="ml-shell">
         <Sidebar />
@@ -38,7 +39,7 @@ export default function MainLayout() {
           </main>
         </div>
       </div>
-    </>
+    </MobileMenuProvider>
   );
 }
 
@@ -111,6 +112,10 @@ const BASE_CSS = `
 
 /* Responsive */
 @media (max-width: 768px) {
+  .ml-content, .ml-simple-main { padding: 16px 16px 48px; }
+  .ml-shell { flex-direction: column; }
+}
+@media (min-width: 769px) and (max-width: 1024px) {
   .ml-content, .ml-simple-main { padding: 24px 24px 48px; }
 }
 `;

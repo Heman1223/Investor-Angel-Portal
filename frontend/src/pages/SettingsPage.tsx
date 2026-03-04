@@ -28,6 +28,7 @@ export default function SettingsPage() {
             <div style={{
                 display: 'flex', gap: 4, padding: 4, borderRadius: 12,
                 background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(197,164,84,0.1)',
+                overflowX: 'auto', WebkitOverflowScrolling: 'touch',
             }}>
                 {TABS.map(tab => (
                     <button
@@ -223,32 +224,34 @@ function AuditLogTab() {
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-light)' }}>
                 <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-primary)' }}>Audit Log</h3>
             </div>
-            <table style={{ width: '100%' }}>
-                <thead>
-                    <tr>
-                        <th style={{ padding: '10px 20px' }}>Action</th>
-                        <th style={{ padding: '10px 20px' }}>Entity</th>
-                        <th style={{ padding: '10px 20px' }}>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {data?.logs?.map((log: any) => (
-                        <tr key={log._id}>
-                            <td style={{ padding: '12px 20px' }}>
-                                <span className="badge badge-blue" style={{ fontSize: 11, padding: '2px 8px' }}>
-                                    {log.action.replace(/_/g, ' ')}
-                                </span>
-                            </td>
-                            <td style={{ padding: '12px 20px', fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                                {log.entityType} ({log.entityId.slice(-6)})
-                            </td>
-                            <td style={{ padding: '12px 20px', fontSize: 12, color: 'var(--color-text-muted)' }}>
-                                {formatDate(log.createdAt)}
-                            </td>
+            <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', minWidth: 500 }}>
+                    <thead>
+                        <tr>
+                            <th style={{ padding: '10px 20px' }}>Action</th>
+                            <th style={{ padding: '10px 20px' }}>Entity</th>
+                            <th style={{ padding: '10px 20px' }}>Date</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {data?.logs?.map((log: any) => (
+                            <tr key={log._id}>
+                                <td style={{ padding: '12px 20px' }}>
+                                    <span className="badge badge-blue" style={{ fontSize: 11, padding: '2px 8px' }}>
+                                        {log.action.replace(/_/g, ' ')}
+                                    </span>
+                                </td>
+                                <td style={{ padding: '12px 20px', fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                                    {log.entityType} ({log.entityId.slice(-6)})
+                                </td>
+                                <td style={{ padding: '12px 20px', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                    {formatDate(log.createdAt)}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
             {data?.pagination && (
                 <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--color-border-light)' }}>
                     <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>

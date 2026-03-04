@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, LogOut, Settings, ChevronDown, X, Command } from 'lucide-react';
+import { Search, Bell, LogOut, Settings, ChevronDown, X, Command, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useMobileMenu } from '../../context/MobileMenuContext';
 import { useQuery } from '@tanstack/react-query';
 import { startupsAPI } from '../../services/api';
 
@@ -95,6 +96,7 @@ export default function Header() {
     const [userOpen, setUserOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
     const [notifs] = useState(3);
+    const { toggle: toggleMobile } = useMobileMenu();
 
     const meta = PAGE_META[location.pathname] || { title: 'Portfolio', sub: '' };
     const isDash = location.pathname === '/';
@@ -118,6 +120,11 @@ export default function Header() {
             {searchOpen && <SearchModal onClose={() => setSearchOpen(false)} />}
 
             <header className="hd-root">
+                {/* Mobile hamburger */}
+                <button className="hd-hamburger" onClick={toggleMobile} title="Open menu">
+                    <Menu size={22} strokeWidth={2} />
+                </button>
+
                 {/* Left: page context */}
                 <div className="hd-left">
                     <div>
@@ -137,7 +144,7 @@ export default function Header() {
                 <div className="hd-center">
                     <button className="hd-search" onClick={() => setSearchOpen(true)}>
                         <Search size={16} strokeWidth={2} />
-                        <span>Search portfolio…</span>
+                        <span className="hd-search-text">Search portfolio…</span>
                         <span className="hd-shortcut"><Command size={9} strokeWidth={2} />K</span>
                     </button>
                 </div>
@@ -148,12 +155,12 @@ export default function Header() {
                         <Bell size={18} strokeWidth={2} />
                         {notifs > 0 && <span className="hd-notif">{notifs}</span>}
                     </button>
-                    <button className="hd-icon" onClick={() => navigate('/settings')} title="Settings">
+                    <button className="hd-icon hd-desktop-only" onClick={() => navigate('/settings')} title="Settings">
                         <Settings size={18} strokeWidth={2} />
                     </button>
-                    <div className="hd-sep" />
+                    <div className="hd-sep hd-desktop-only" />
 
-                    <div className="hd-user-wrap">
+                    <div className="hd-user-wrap hd-desktop-only">
                         <button className="hd-user" onClick={() => setUserOpen(!userOpen)}>
                             <div className="hd-user-text">
                                 <span className="hd-uname">{investor?.name || 'Arjun Mehta'}</span>
@@ -206,6 +213,28 @@ const HD_CSS = `
   box-shadow:0 1px 0 rgba(197,164,84,0.04);
 }
 
+/* Hamburger — mobile only */
+.hd-hamburger{
+  display:none;
+  width:40px;height:40px;border-radius:10px;
+  background:transparent;border:1px solid rgba(197,164,84,0.15);
+  align-items:center;justify-content:center;
+  cursor:pointer;color:var(--cream, #EDE5CC);
+  transition:background 0.15s;flex-shrink:0;
+}
+.hd-hamburger:hover{background:rgba(197,164,84,0.08);}
+
+@media (max-width:768px){
+  .hd-hamburger{display:flex;}
+  .hd-root{padding:0 16px;height:56px;gap:10px;}
+  .hd-left{display:none;}
+  .hd-center{max-width:none;flex:1;}
+  .hd-search{height:38px;}
+  .hd-search-text{display:none;}
+  .hd-shortcut{display:none;}
+  .hd-desktop-only{display:none!important;}
+}
+
 /* Left */
 .hd-left{flex:0 0 auto;}
 .hd-title-row{display:flex;align-items:center;gap:12px;margin-bottom:2px;}
@@ -219,7 +248,7 @@ const HD_CSS = `
 .hd-center{flex:1;max-width:480px;}
 .hd-search{width:100%;height:42px;display:flex;align-items:center;gap:12px;padding:0 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;font-family:var(--font-body, 'Inter', sans-serif);font-size:14px;color:#5A6380;cursor:pointer;transition:border-color 0.2s,background 0.2s;text-align:left;}
 .hd-search:hover{border-color:rgba(197,164,84,0.3);background:rgba(197,164,84,0.05);color:var(--cream, #EDE5CC);}
-.hd-search span:nth-child(2){flex:1;}
+.hd-search-text{flex:1;}
 .hd-shortcut{display:flex;align-items:center;gap:4px;font-family:var(--font-mono, 'IBM Plex Mono', monospace);font-size:10px;color:#4A5368;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:4px 8px;background:rgba(255,255,255,0.04);}
 
 /* Right */
