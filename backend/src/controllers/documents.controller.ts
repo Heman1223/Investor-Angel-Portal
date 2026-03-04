@@ -85,3 +85,12 @@ export async function updateDocument(req: AuthRequest, res: Response, next: Next
         res.json({ success: true, data: doc });
     } catch (error) { next(error); }
 }
+
+export async function getFile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { buffer, fileName, mimeType } = await documentsService.getFile(req.investor!.id, req.params.id);
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.send(buffer);
+    } catch (error) { next(error); }
+}

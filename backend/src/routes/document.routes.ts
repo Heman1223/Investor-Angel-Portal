@@ -15,8 +15,11 @@ router.post('/upload', documentsController.uploadMiddleware, documentsController
 // Update document (rename, re-link, change type)
 router.put('/:id', documentsController.updateDocument);
 
-// Download a specific document
+// Download metadata
 router.get('/:id/download', documentsController.downloadDocument);
+
+// Get actual file content
+router.get('/:id/file', documentsController.getFile);
 
 // Delete (archive) a document
 router.delete('/:id', documentsController.deleteDocument);

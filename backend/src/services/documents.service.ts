@@ -62,14 +62,15 @@ export async function uploadDocument(
     }
 
     const folder = startupId || 'general';
-    const fileKey = `${folder}/${uuidv4()}-${file.originalname}`;
+    const uniqueFileName = `${uuidv4()}-${file.originalname}`;
+    const fileKey = `${folder}/${uniqueFileName}`;
     const filePath = path.join(UPLOAD_DIR, folder);
 
     if (!fs.existsSync(filePath)) {
         fs.mkdirSync(filePath, { recursive: true });
     }
 
-    fs.writeFileSync(path.join(filePath, `${uuidv4()}-${file.originalname}`), file.buffer);
+    fs.writeFileSync(path.join(filePath, uniqueFileName), file.buffer);
 
     const createData: Record<string, unknown> = {
         investorId,
@@ -161,5 +162,25 @@ export async function updateDocument(
     return {
         ...rest,
         startupId: startup ? { _id: startup.id, name: startup.name } : null
+    };
+}
+
+export async function getFile(investorId: string, documentId: string) {
+    const doc = await prisma.document.findFirst({
+        where: { id: documentId, investorId }
+    });
+    if (!doc) {
+        throw createAppError('Document not found', 404, 'NOT_FOUND');
+    }
+
+    const filePath = path.join(UPLOAD_DIR, doc.fileKey);
+    if (!fs.existsSync(filePath)) {
+        throw createAppError('File not found on disk', 404, 'NOT_FOUND');
+    }
+
+    return {
+        buffer: fs.readFileSync(filePath),
+        fileName: doc.fileName,
+        mimeType: doc.mimeType
     };
 }
