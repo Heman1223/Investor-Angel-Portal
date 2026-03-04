@@ -12,7 +12,7 @@ import {
     FileText, Clock
 } from 'lucide-react';
 import { dashboardAPI, alertsAPI } from '../services/api';
-import { formatCurrencyCompact, formatMOIC, formatPercent, paiseToRupees } from '../utils/formatters';
+import { formatCurrencyCompact, formatMOIC, formatPercent, formatDate, paiseToRupees } from '../utils/formatters';
 
 // ── Animated Number Component ──────────────────────────────
 const AnimatedNumber = ({ value, formatter = (v: number) => String(v), duration = 1200 }: { value: number, formatter?: (v: number) => string, duration?: number }) => {
@@ -370,7 +370,9 @@ export default function DashboardPage() {
                                                 <p className="d-activity-desc">
                                                     <strong>{a.startupName}</strong> — {a.description}
                                                 </p>
-                                                <p className="d-activity-time"><Clock size={10} strokeWidth={2} /> {timeAgo}</p>
+                                                <p className="d-activity-time" title={formatDate(a.date)}>
+                                                    <Clock size={10} strokeWidth={2} /> {timeAgo} • {formatDate(a.date)}
+                                                </p>
                                             </div>
                                         </div>
                                     );
