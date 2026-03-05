@@ -84,7 +84,7 @@ export default function AlertsPage() {
                         onClick={() => setFilter(tab)}
                         style={{
                             padding: '6px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
-                            background: filter === tab ? 'rgba(197,164,84,0.15)' : 'transparent',
+                            background: filter === tab ? 'rgba(212,168,67,0.15)' : 'transparent',
                             color: filter === tab ? 'var(--color-primary)' : 'var(--color-text-muted)',
                             transition: 'all 0.2s',
                         }}
@@ -102,7 +102,7 @@ export default function AlertsPage() {
                     </div>
                 ) : filteredAlerts.map((alert: any) => (
                     <div
-                        key={alert._id}
+                        key={alert.id}
                         className="card"
                         style={{
                             display: 'flex', alignItems: 'flex-start', gap: 16,
@@ -137,7 +137,7 @@ export default function AlertsPage() {
                         {!alert.isRead && (
                             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                                 <button
-                                    onClick={() => markReadMutation.mutate(alert._id)}
+                                    onClick={() => markReadMutation.mutate(alert.id)}
                                     className="btn btn-secondary btn-sm"
                                     title="Mark as read"
                                 >

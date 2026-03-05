@@ -19,10 +19,14 @@ export async function getDocuments(investorId: string, startupId: string) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
 
-    return prisma.document.findMany({
+    const docs = await prisma.document.findMany({
         where: { startupId, isArchived: false },
         orderBy: { uploadedAt: 'desc' }
     });
+    return docs.map(doc => ({
+        ...doc,
+        uploadedAt: doc.uploadedAt?.toISOString() || null
+    }));
 }
 
 export async function getAllDocuments(investorId: string) {
@@ -33,11 +37,12 @@ export async function getAllDocuments(investorId: string) {
     });
 
     return docs.map(doc => {
-        const { startup, ...rest } = doc;
+        const { startup, uploadedAt, createdAt, updatedAt, ...rest } = doc as any;
         return {
             ...rest,
+            uploadedAt: uploadedAt?.toISOString() || null,
             startupId: startup ? {
-                _id: startup.id,
+                id: startup.id,
                 name: startup.name
             } : null
         };

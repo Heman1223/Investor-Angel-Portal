@@ -56,7 +56,7 @@ export default function ReportsPage() {
             return res.data;
         },
         onSuccess: (data: Blob) => {
-            const startup = startups?.find((s: any) => s._id === selectedStartup || s.id === selectedStartup);
+            const startup = startups?.find((s: any) => s.id === selectedStartup || s.id === selectedStartup);
             downloadBlob(data, `${startup?.name || 'startup'}-report-${new Date().toISOString().split('T')[0]}.pdf`);
             toast.success('Startup report downloaded');
         },
@@ -101,10 +101,10 @@ export default function ReportsPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
                     {/* Portfolio Report Card */}
                     <div className="card" style={{ padding: '28px', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(197,164,84,0.04)', border: '1px solid rgba(197,164,84,0.06)' }} />
+                        <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(212,168,67,0.04)', border: '1px solid rgba(212,168,67,0.06)' }} />
                         <div style={{
                             width: 48, height: 48, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-                            background: 'rgba(197,164,84,0.08)', border: '1px solid rgba(197,164,84,0.18)',
+                            background: 'rgba(212,168,67,0.08)', border: '1px solid rgba(212,168,67,0.18)',
                         }}>
                             <Briefcase size={22} style={{ color: 'var(--color-primary)' }} />
                         </div>
@@ -151,7 +151,7 @@ export default function ReportsPage() {
                         >
                             <option value="">Select a startup...</option>
                             {startups?.map((s: any) => (
-                                <option key={s._id || s.id} value={s._id || s.id}>{s.name}</option>
+                                <option key={s.id || s.id} value={s.id || s.id}>{s.name}</option>
                             ))}
                         </select>
                         <button

@@ -19,7 +19,7 @@ export default function ComparisonPage() {
 
     const selectedStartups = useMemo(() => {
         if (!allStartups) return [];
-        return selectedIds.map(id => allStartups.find((s: any) => (s._id || s.id) === id)).filter(Boolean);
+        return selectedIds.map(id => allStartups.find((s: any) => (s.id || s.id) === id)).filter(Boolean);
     }, [allStartups, selectedIds]);
 
     const toggleStartup = (id: string) => {
@@ -30,7 +30,7 @@ export default function ComparisonPage() {
         });
     };
 
-    const chartColors = ['#C5A454', '#60A5FA', '#4ADE80', '#F472B6'];
+    const chartColors = ['#d4a843', '#60A5FA', '#4ADE80', '#F472B6'];
 
     // Build comparison chart data
     const comparisonMetrics = useMemo(() => {
@@ -79,13 +79,13 @@ export default function ComparisonPage() {
             <div className="card" style={{ padding: '16px 20px', position: 'relative', zIndex: showPicker ? 50 : 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     {selectedStartups.map((s: any, i: number) => (
-                        <span key={s._id || s.id} style={{
+                        <span key={s.id || s.id} style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600,
                             background: `${chartColors[i]}20`, color: chartColors[i], border: `1px solid ${chartColors[i]}40`,
                         }}>
                             <span style={{ width: 8, height: 8, borderRadius: '50%', background: chartColors[i] }}></span>
                             {s.name}
-                            <button title={`Remove ${s.name}`} onClick={() => toggleStartup(s._id || s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, marginLeft: 4 }}>
+                            <button title={`Remove ${s.name}`} onClick={() => toggleStartup(s.id || s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, marginLeft: 4 }}>
                                 <X size={12} />
                             </button>
                         </span>
@@ -108,20 +108,20 @@ export default function ComparisonPage() {
                                         background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 12,
                                         boxShadow: 'var(--shadow-lg)', minWidth: 260, maxHeight: 300, overflowY: 'auto', padding: 8,
                                     }}>
-                                        {allStartups?.filter((s: any) => !selectedIds.includes(s._id || s.id) && s.status === 'active').length === 0 && (
+                                        {allStartups?.filter((s: any) => !selectedIds.includes(s.id || s.id) && s.status === 'active').length === 0 && (
                                             <p style={{ padding: '12px 8px', fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>No more active startups</p>
                                         )}
-                                        {allStartups?.filter((s: any) => !selectedIds.includes(s._id || s.id) && s.status === 'active').map((s: any) => (
+                                        {allStartups?.filter((s: any) => !selectedIds.includes(s.id || s.id) && s.status === 'active').map((s: any) => (
                                             <button
-                                                key={s._id || s.id}
+                                                key={s.id || s.id}
                                                 title={`Compare ${s.name}`}
-                                                onClick={() => { toggleStartup(s._id || s.id); setShowPicker(false); }}
+                                                onClick={() => { toggleStartup(s.id || s.id); setShowPicker(false); }}
                                                 style={{
                                                     display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 8,
                                                     background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-primary)', fontSize: 13, fontWeight: 500,
                                                     transition: 'background 0.15s',
                                                 }}
-                                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(197,164,84,0.06)')}
+                                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(212,168,67,0.06)')}
                                                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                             >
                                                 <div style={{
@@ -167,7 +167,7 @@ export default function ComparisonPage() {
                                 <tr>
                                     <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Metric</th>
                                     {selectedStartups.map((s: any, i: number) => (
-                                        <th key={s._id || s.id} style={{ padding: '12px 20px', textAlign: 'left', fontSize: 13, fontWeight: 600, color: chartColors[i] }}>{s.name}</th>
+                                        <th key={s.id || s.id} style={{ padding: '12px 20px', textAlign: 'left', fontSize: 13, fontWeight: 600, color: chartColors[i] }}>{s.name}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -184,7 +184,7 @@ export default function ComparisonPage() {
                                     <tr key={row.label} style={{ borderTop: '1px solid var(--color-border-light)' }}>
                                         <td style={{ padding: '12px 20px', fontSize: 14, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{row.label}</td>
                                         {selectedStartups.map((s: any) => (
-                                            <td key={s._id || s.id} style={{ padding: '12px 20px', fontSize: 14, fontWeight: 600, color: row.color(s), fontFamily: "var(--font-mono, 'IBM Plex Mono', monospace)" }}>
+                                            <td key={s.id || s.id} style={{ padding: '12px 20px', fontSize: 14, fontWeight: 600, color: row.color(s), fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
                                                 {row.render(s)}
                                             </td>
                                         ))}
@@ -202,7 +202,7 @@ export default function ComparisonPage() {
                         <div style={{ height: 320 }}>
                             <ResponsiveContainer>
                                 <BarChart data={comparisonMetrics} margin={{ top: 10, right: 10, left: 0, bottom: 30 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(197,164,84,0.08)" vertical={false} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(212,168,67,0.08)" vertical={false} />
                                     <XAxis dataKey="metric" tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
                                     <YAxis tick={{ fill: 'var(--color-text-secondary)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => formatCurrencyCompact(v)} />
                                     <Tooltip
@@ -216,7 +216,7 @@ export default function ComparisonPage() {
                                         iconSize={8}
                                     />
                                     {selectedStartups.map((s: any, i: number) => (
-                                        <Bar key={s._id || s.id} dataKey={`s${i}`} name={s.name} fill={chartColors[i]} radius={[6, 6, 0, 0]} />
+                                        <Bar key={s.id || s.id} dataKey={`s${i}`} name={s.name} fill={chartColors[i]} radius={[6, 6, 0, 0]} />
                                     ))}
                                 </BarChart>
                             </ResponsiveContainer>
@@ -231,7 +231,7 @@ export default function ComparisonPage() {
                         <div style={{ height: 220 }}>
                             <ResponsiveContainer>
                                 <BarChart data={moicData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 30 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(197,164,84,0.08)" horizontal={false} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(212,168,67,0.08)" horizontal={false} />
                                     <XAxis type="number" tick={{ fill: 'var(--color-text-secondary)', fontSize: 10 }} axisLine={false} tickLine={false} />
                                     <YAxis type="category" dataKey="metric" tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
                                     <Tooltip
@@ -245,7 +245,7 @@ export default function ComparisonPage() {
                                         iconSize={8}
                                     />
                                     {selectedStartups.map((s: any, i: number) => (
-                                        <Bar key={s._id || s.id} dataKey={`s${i}`} name={s.name} fill={chartColors[i]} radius={[0, 6, 6, 0]} />
+                                        <Bar key={s.id || s.id} dataKey={`s${i}`} name={s.name} fill={chartColors[i]} radius={[0, 6, 6, 0]} />
                                     ))}
                                 </BarChart>
                             </ResponsiveContainer>

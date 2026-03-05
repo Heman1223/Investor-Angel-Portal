@@ -30,7 +30,7 @@ const STAGE_CFG: Record<string, { bg: string; color: string; border: string }> =
     'Series A': { bg: 'rgba(52,211,153,.09)', color: '#34d399', border: 'rgba(52,211,153,.22)' },
     'Series B': { bg: 'rgba(96,165,250,.09)', color: '#60a5fa', border: 'rgba(96,165,250,.22)' },
     'Series C': { bg: 'rgba(249,115,22,.09)', color: '#f97316', border: 'rgba(249,115,22,.22)' },
-    'Growth': { bg: 'rgba(197,164,84,.09)', color: '#C5A454', border: 'rgba(197,164,84,.22)' },
+    'Growth': { bg: 'rgba(212,168,67,.09)', color: '#d4a843', border: 'rgba(212,168,67,.22)' },
     'Pre-IPO': { bg: 'rgba(236,72,153,.09)', color: '#ec4899', border: 'rgba(236,72,153,.22)' },
 };
 
@@ -53,6 +53,12 @@ function useCountUp(target: number, dur = 1000, delay = 0) {
         return () => cancelAnimationFrame(id);
     }, [target, dur, delay]);
     return v;
+}
+
+/* Wrapper component so useCountUp is called at component-level, not in a loop/IIFE */
+function CountUpCell({ raw, dur, delay, fmt }: { raw: number; dur?: number; delay?: number; fmt: (v: number) => string }) {
+    const v = useCountUp(raw, dur, delay);
+    return <>{fmt(v)}</>;
 }
 
 export default function StartupDetailPage() {
@@ -160,9 +166,11 @@ export default function StartupDetailPage() {
                             </div>
                             {s.description && <p className="sd-description">{s.description}</p>}
                             <div className="sd-meta-row">
-                                <span className="sd-meta-item"><span className="sd-meta-dot" style={{ background: '#C5A454' }} />{s.sector}</span>
+                                <span className="sd-meta-item"><span className="sd-meta-dot" style={{ background: '#d4a843' }} />{s.sector}</span>
                                 <span className="sd-meta-div" />
-                                <span className="sd-meta-item"><Calendar size={11} />{formatDate(s.investmentDate)}</span>
+                                <span className="sd-meta-item" title="Initial Investment Date"><Calendar size={11} />{formatDate(s.investmentDate || s.createdAt)}</span>
+                                <span className="sd-meta-div" />
+                                <span className="sd-meta-item" title="Current Date"><Calendar size={11} />{formatDate(new Date())}</span>
                                 {s.founderName && <><span className="sd-meta-div" /><span className="sd-meta-item"><Users size={11} />{s.founderName}</span></>}
                             </div>
                         </div>
@@ -170,11 +178,11 @@ export default function StartupDetailPage() {
 
                     {s.status === 'active' && (
                         <div className="sd-header-actions" onClick={e => e.stopPropagation()}>
-                            <button className="sd-ghost-btn" title="Share">
+                            <button className="sd-ghost-btn" title="Share" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(window.location.href); toast.success('Link copied to clipboard'); }}>
                                 <Share2 size={13} /> Share
                             </button>
                             <div className="sd-manage-wrap">
-                                <button className="sd-gold-btn" onClick={() => setShowManage(v => !v)}>
+                                <button className="sd-gold-btn" onClick={(e) => { e.stopPropagation(); setShowManage(v => !v); }}>
                                     <Edit3 size={13} /> Manage <ChevronDown size={11} />
                                 </button>
                                 {showManage && (
@@ -205,16 +213,16 @@ export default function StartupDetailPage() {
                 {/* ── Stat Cards ── */}
                 <div className="sd-stats">
                     {[
-                        { lbl: 'Total Invested', raw: paiseToRupees(m.invested), fmt: (x: number) => formatCurrencyCompact(x), sub: s.cashflows?.length > 1 ? 'Initial + Follow-on' : 'Initial investment', accent: '#C5A454', idx: 0 },
+                        { lbl: 'Total Invested', raw: paiseToRupees(m.invested), fmt: (x: number) => formatCurrencyCompact(x), sub: s.cashflows?.length > 1 ? 'Initial + Follow-on' : 'Initial investment', accent: '#d4a843', idx: 0 },
                         { lbl: 'Current Value', raw: paiseToRupees(m.currentValue), fmt: (x: number) => formatCurrencyCompact(x), sub: m.currentValue > m.invested ? `↑ +${formatPercent((m.currentValue - m.invested) / m.invested)}` : '—', accent: m.currentValue >= m.invested ? '#34d399' : '#f87171', subColor: m.currentValue >= m.invested ? '#34d399' : '#f87171', idx: 1 },
-                        { lbl: 'Multiple (MOIC)', raw: m.moic * 100, fmt: (x: number) => `${(x / 100).toFixed(2)}×`, sub: m.moic >= 1 ? `↑ +${(m.moic - 1).toFixed(1)}× vs invested` : `↓ ${(m.moic - 1).toFixed(1)}× below par`, accent: m.moic >= 1 ? '#C5A454' : '#f87171', subColor: m.moic >= 1 ? '#C5A454' : '#f87171', idx: 2 },
+                        { lbl: 'Multiple (MOIC)', raw: m.moic * 100, fmt: (x: number) => `${(x / 100).toFixed(2)}×`, sub: m.moic >= 1 ? `↑ +${(m.moic - 1).toFixed(1)}× vs invested` : `↓ ${(m.moic - 1).toFixed(1)}× below par`, accent: m.moic >= 1 ? '#d4a843' : '#f87171', subColor: m.moic >= 1 ? '#d4a843' : '#f87171', idx: 2 },
                         { lbl: 'Net IRR', raw: Math.abs((m.xirr || 0) * 100), fmt: (x: number) => `${(m.xirr || 0) < 0 ? '-' : ''}${(x).toFixed(1)}%`, sub: (m.xirr || 0) > 0 ? '↑ Top decile performance' : '—', accent: (m.xirr || 0) >= 0 ? '#34d399' : '#f87171', subColor: (m.xirr || 0) >= 0 ? '#34d399' : '#f87171', idx: 3 },
                     ].map(c => (
                         <div key={c.lbl} className="sd-stat" style={{ '--ac': c.accent, '--idx': c.idx } as any}>
                             <div className="sd-stat-shine" />
                             <div className="sd-stat-lbl">{c.lbl}</div>
                             <div className="sd-stat-val">
-                                {(() => { const v = useCountUp(c.raw, 900, c.idx * 80); return c.fmt(v); })()}
+                                <CountUpCell raw={c.raw} dur={900} delay={c.idx * 80} fmt={c.fmt} />
                             </div>
                             <div className="sd-stat-sub" style={{ color: (c as any).subColor || 'var(--t3)' }}>{c.sub}</div>
                             <div className="sd-stat-bar"><div className="sd-stat-bar-fill" /></div>
@@ -280,7 +288,7 @@ function StatusChip({ status }: { status: string }) {
 function OverviewTab({ startup, updates, documents, handleDownload }: any) {
     const s = startup;
     const chartData = s.cashflows?.map((cf: any) => ({
-        name: formatDate(cf.date),
+        name: formatDate(cf.date || cf.createdAt),
         value: paiseToRupees(Math.abs(cf.amount)),
     })) || [];
 
@@ -302,15 +310,15 @@ function OverviewTab({ startup, updates, documents, handleDownload }: any) {
                             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="perfG" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#C5A454" stopOpacity={0.18} />
-                                        <stop offset="95%" stopColor="#C5A454" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#d4a843" stopOpacity={0.18} />
+                                        <stop offset="95%" stopColor="#d4a843" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(197,164,84,.07)" vertical={false} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(212,168,67,.07)" vertical={false} />
                                 <XAxis dataKey="name" tick={{ fill: '#3d4f63', fontSize: 10 }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fill: '#3d4f63', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => formatCurrencyCompact(v)} />
-                                <Tooltip contentStyle={{ background: '#0b1825', border: '1px solid rgba(197,164,84,.2)', borderRadius: 10, fontSize: 12, color: '#ede8db', padding: '8px 14px' }} formatter={(v: any) => [formatCurrencyCompact(v), 'Amount']} />
-                                <Area type="monotone" dataKey="value" stroke="#C5A454" fill="url(#perfG)" strokeWidth={2} dot={{ fill: '#C5A454', r: 3, stroke: '#07111d', strokeWidth: 2 }} />
+                                <Tooltip contentStyle={{ background: '#0b1825', border: '1px solid rgba(212,168,67,.2)', borderRadius: 10, fontSize: 12, color: '#ede8db', padding: '8px 14px' }} formatter={(v: any) => [formatCurrencyCompact(v), 'Amount']} />
+                                <Area type="monotone" dataKey="value" stroke="#d4a843" fill="url(#perfG)" strokeWidth={2} dot={{ fill: '#d4a843', r: 3, stroke: '#07111d', strokeWidth: 2 }} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
@@ -328,8 +336,8 @@ function OverviewTab({ startup, updates, documents, handleDownload }: any) {
                         </tr></thead>
                         <tbody>
                             {s.cashflows?.slice(0, 5).map((cf: any) => (
-                                <tr key={cf._id}>
-                                    <td className="mono">{formatDate(cf.date)}</td>
+                                <tr key={cf.id || cf._id}>
+                                    <td className="mono" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(cf.date || cf.createdAt)}</td>
                                     <td><span className="sd-type-badge" style={{ background: cf.amount < 0 ? 'rgba(52,211,153,.1)' : 'rgba(96,165,250,.1)', color: cf.amount < 0 ? '#34d399' : '#60a5fa' }}>{cf.type.replace('_', ' ')}</span></td>
                                     <td className="muted">{cf.roundName || '—'}</td>
                                     <td className="nr mono semi">{formatCurrencyCompact(paiseToRupees(Math.abs(cf.amount)))}</td>
@@ -348,8 +356,8 @@ function OverviewTab({ startup, updates, documents, handleDownload }: any) {
                     {updates?.length > 0 ? (
                         <div className="sd-timeline">
                             {updates.slice(0, 3).map((u: any, i: number) => (
-                                <div key={u._id} className={`sd-tl-item${i < 2 ? ' has-line' : ''}`}>
-                                    <div className="sd-tl-dot" style={{ background: i === 0 ? '#C5A454' : 'var(--bd)', boxShadow: i === 0 ? '0 0 8px rgba(197,164,84,.4)' : 'none' }} />
+                                <div key={u.id} className={`sd-tl-item${i < 2 ? ' has-line' : ''}`}>
+                                    <div className="sd-tl-dot" style={{ background: i === 0 ? '#d4a843' : 'var(--bd)', boxShadow: i === 0 ? '0 0 8px rgba(212,168,67,.4)' : 'none' }} />
                                     <div className="sd-tl-content">
                                         <div className="sd-tl-month">{formatMonth(u.month)}</div>
                                         <div className="sd-tl-rev">Revenue: {formatCurrencyCompact(paiseToRupees(u.revenue))}</div>
@@ -371,13 +379,13 @@ function OverviewTab({ startup, updates, documents, handleDownload }: any) {
                                 const ext = doc.fileName.split('.').pop()?.toUpperCase() || 'DOC';
                                 const isPdf = doc.fileName.endsWith('.pdf');
                                 return (
-                                    <div key={doc._id} className="sd-doc-row">
+                                    <div key={doc.id} className="sd-doc-row">
                                         <div className="sd-doc-icon" style={{ background: isPdf ? 'rgba(248,113,113,.12)' : 'rgba(96,165,250,.12)', color: isPdf ? '#f87171' : '#60a5fa' }}>{ext}</div>
                                         <div className="sd-doc-info">
                                             <p className="sd-doc-name">{doc.fileName}</p>
                                             <p className="sd-doc-meta">{formatDate(doc.uploadedAt || doc.createdAt)} · {(doc.fileSizeBytes / 1024).toFixed(0)} KB</p>
                                         </div>
-                                        <button className="sd-dl-btn" onClick={() => handleDownload(doc._id || doc.id, doc.fileName)}><Download size={13} /></button>
+                                        <button className="sd-dl-btn" onClick={() => handleDownload(doc.id || doc._id, doc.fileName)}><Download size={13} /></button>
                                     </div>
                                 );
                             })}
@@ -426,7 +434,7 @@ function CashflowsTab({ startup }: { startup: any }) {
                 <tbody>
                     {startup.cashflows?.map((cf: any) => (
                         <tr key={cf.id || cf._id}>
-                            <td className="mono">{formatDate(cf.date)}</td>
+                            <td className="mono">{formatDate(cf.date || cf.createdAt)}</td>
                             <td><span className="sd-type-badge" style={{ background: cf.amount < 0 ? 'rgba(52,211,153,.1)' : 'rgba(96,165,250,.1)', color: cf.amount < 0 ? '#34d399' : '#60a5fa' }}>{cf.type.replace('_', ' ')}</span></td>
                             <td className={`nr mono semi${cf.amount < 0 ? ' red' : ' green'}`}>{cf.amount < 0 ? '-' : '+'}{formatCurrencyCompact(paiseToRupees(Math.abs(cf.amount)))}</td>
                             <td className="muted">{cf.roundName || '—'}</td>
@@ -466,7 +474,7 @@ function UpdatesTab({ updates, onAddUpdate, isActive }: any) {
                         <thead><tr><th>Month</th><th>Revenue</th><th>Burn</th><th>Cash</th><th>Runway</th><th>Notes</th></tr></thead>
                         <tbody>
                             {updates.map((u: any) => (
-                                <tr key={u._id}>
+                                <tr key={u.id}>
                                     <td className="semi">{formatMonth(u.month)}</td>
                                     <td className="mono">{formatCurrencyCompact(paiseToRupees(u.revenue))}</td>
                                     <td className="mono">{formatCurrencyCompact(paiseToRupees(u.burnRate))}</td>
@@ -498,13 +506,13 @@ function DocumentsTab({ documents, handleDownload }: { documents: any[]; handleD
                 const ext = doc.fileName.split('.').pop()?.toUpperCase() || 'DOC';
                 const isPdf = doc.fileName.endsWith('.pdf');
                 return (
-                    <div key={doc._id} className="sd-doc-card">
+                    <div key={doc.id || doc._id} className="sd-doc-card">
                         <div className="sd-doc-icon lg" style={{ background: isPdf ? 'rgba(248,113,113,.12)' : 'rgba(96,165,250,.12)', color: isPdf ? '#f87171' : '#60a5fa' }}>{ext}</div>
                         <div className="sd-doc-info">
                             <p className="sd-doc-name">{doc.fileName}</p>
                             <p className="sd-doc-meta">{formatDate(doc.uploadedAt || doc.createdAt)} · {(doc.fileSizeBytes / 1024).toFixed(0)} KB</p>
                         </div>
-                        <button className="sd-dl-btn" onClick={() => handleDownload(doc._id || doc.id, doc.fileName)}><Download size={14} /></button>
+                        <button className="sd-dl-btn" onClick={() => handleDownload(doc.id || doc._id, doc.fileName)}><Download size={14} /></button>
                     </div>
                 );
             })}
@@ -561,7 +569,7 @@ function NotesTab({ startup, onAddNote, isLoading }: any) {
 function DilutionTab({ startup }: { startup: any }) {
     const events = startup.dilutionEvents || [];
     const timeline = (startup.cashflows || []).filter((cf: any) => cf.valuationAtTime).map((cf: any) => ({
-        name: formatDate(cf.date), valuation: paiseToRupees(cf.valuationAtTime),
+        name: formatDate(cf.date || cf.createdAt), valuation: paiseToRupees(cf.valuationAtTime),
     }));
 
     return (
@@ -572,10 +580,10 @@ function DilutionTab({ startup }: { startup: any }) {
                     <div className="sd-chart-wrap">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={timeline} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(197,164,84,.07)" vertical={false} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(212,168,67,.07)" vertical={false} />
                                 <XAxis dataKey="name" tick={{ fill: '#3d4f63', fontSize: 10 }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fill: '#3d4f63', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => formatCurrencyCompact(v)} />
-                                <Tooltip contentStyle={{ background: '#0b1825', border: '1px solid rgba(197,164,84,.2)', borderRadius: 10, fontSize: 12, color: '#ede8db', padding: '8px 14px' }} formatter={(v: any) => [formatCurrencyCompact(v), 'Valuation']} />
+                                <Tooltip contentStyle={{ background: '#0b1825', border: '1px solid rgba(212,168,67,.2)', borderRadius: 10, fontSize: 12, color: '#ede8db', padding: '8px 14px' }} formatter={(v: any) => [formatCurrencyCompact(v), 'Valuation']} />
                                 <Line type="monotone" dataKey="valuation" stroke="#a78bfa" strokeWidth={2} dot={{ fill: '#a78bfa', r: 4, stroke: '#07111d', strokeWidth: 2 }} name="Valuation" />
                             </LineChart>
                         </ResponsiveContainer>
@@ -591,9 +599,9 @@ function DilutionTab({ startup }: { startup: any }) {
                             {events.map((de: any) => {
                                 const chg = de.postDilutionEquity - de.preDilutionEquity;
                                 return (
-                                    <tr key={de.id}>
+                                    <tr key={de.id || de._id}>
                                         <td className="semi">{de.roundName}</td>
-                                        <td className="muted mono">{formatDate(de.date)}</td>
+                                        <td className="muted mono">{formatDate(de.date || de.createdAt)}</td>
                                         <td className="nr mono">{de.preDilutionEquity.toFixed(2)}%</td>
                                         <td className="nr mono">{de.postDilutionEquity.toFixed(2)}%</td>
                                         <td className={`nr mono semi ${chg >= 0 ? 'green' : 'red'}`}>{chg >= 0 ? '+' : ''}{chg.toFixed(2)}%</td>
@@ -730,7 +738,17 @@ function FollowOnModal({ onClose, onSubmit, isLoading }: any) {
 }
 
 function EditStartupModal({ startup, onClose, onSubmit, isLoading }: any) {
-    const [f, setF] = useState({ name: startup.name || '', sector: startup.sector || '', stage: startup.stage || '', description: startup.description || '', website: startup.website || '', founderName: startup.founderName || '', founderEmail: startup.founderEmail || '', coInvestors: startup.coInvestors || '' });
+    const [f, setF] = useState({
+        name: startup.name || '',
+        sector: startup.sector || '',
+        stage: startup.stage || '',
+        description: startup.description || '',
+        website: startup.website || '',
+        founderName: startup.founderName || '',
+        founderEmail: startup.founderEmail || '',
+        coInvestors: startup.coInvestors || '',
+        investmentDate: startup.investmentDate ? startup.investmentDate.split('T')[0] : ''
+    });
     const U = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
     const handleSave = () => {
         const changes: any = {};
@@ -747,7 +765,10 @@ function EditStartupModal({ startup, onClose, onSubmit, isLoading }: any) {
                     <MF label="Stage" req><select className="sd-inp" value={f.stage} onChange={U('stage')}>{STAGES.map(s => <option key={s}>{s}</option>)}</select></MF>
                 </div>
                 <MF label="Description"><textarea className="sd-inp" rows={2} value={f.description} onChange={U('description')} placeholder="Brief description…" /></MF>
-                <MF label="Website"><input type="url" className="sd-inp" value={f.website} onChange={U('website')} placeholder="https://…" /></MF>
+                <div className="sd-r2">
+                    <MF label="Investment Date" req><input type="date" className="sd-inp" value={f.investmentDate} onChange={U('investmentDate')} required /></MF>
+                    <MF label="Website"><input type="url" className="sd-inp" value={f.website} onChange={U('website')} placeholder="https://…" /></MF>
+                </div>
                 <div className="sd-r2">
                     <MF label="Founder Name"><input className="sd-inp" value={f.founderName} onChange={U('founderName')} /></MF>
                     <MF label="Founder Email"><input type="email" className="sd-inp" value={f.founderEmail} onChange={U('founderEmail')} /></MF>
@@ -843,10 +864,10 @@ function DeleteCashflowConfirm({ cashflow, onClose, onConfirm, isLoading }: any)
 function SD() {
     return (
         <style>{`
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@400;500&family=Plus Jakarta Sans:wght@400;500;600;700;800&display=swap');
 
 :root{
-    --gold:#C5A454; --gold2:rgba(197,164,84,.18); --gold3:rgba(197,164,84,.08); --gold4:rgba(197,164,84,.28);
+    --gold:#d4a843; --gold2:rgba(212,168,67,.18); --gold3:rgba(212,168,67,.08); --gold4:rgba(212,168,67,.28);
     --bg:var(--color-bg,#07111d); --card:var(--color-card-bg,#0b1825);
     --bd:var(--color-border-light,rgba(255,255,255,.07)); --bd2:rgba(255,255,255,.04);
     --t1:var(--color-text-primary,#ede8db); --t2:var(--color-text-secondary,#7d8fa6); --t3:var(--color-text-muted,#3d4f63);
@@ -854,7 +875,7 @@ function SD() {
 }
 
 /* ── root ── */
-.sd{ padding:0 0 72px; font-family:'Syne',sans-serif; opacity:0; transform:translateY(10px); transition:opacity .45s ease,transform .45s ease; }
+.sd{ padding:0 0 72px; font-family:'Plus Jakarta Sans',sans-serif; opacity:0; transform:translateY(10px); transition:opacity .45s ease,transform .45s ease; }
 .sd--in{ opacity:1; transform:translateY(0); }
 
 /* ── breadcrumb ── */
@@ -891,18 +912,18 @@ function SD() {
 .sd-header-actions{ display:flex; gap:8px; align-items:center; flex-shrink:0; }
 
 /* buttons */
-.sd-gold-btn{ display:inline-flex; align-items:center; gap:6px; background:var(--gold); color:#080f18; font-family:'Syne',sans-serif; font-size:11.5px; font-weight:700; letter-spacing:.3px; padding:9px 18px; border-radius:8px; border:none; cursor:pointer; transition:opacity .15s,transform .15s,box-shadow .15s; box-shadow:0 4px 20px rgba(197,164,84,.2); white-space:nowrap; }
-.sd-gold-btn:hover{ opacity:.9; transform:translateY(-1px); box-shadow:0 8px 28px rgba(197,164,84,.3); }
+.sd-gold-btn{ display:inline-flex; align-items:center; gap:6px; background:var(--gold); color:#080f18; font-family:'Plus Jakarta Sans',sans-serif; font-size:11.5px; font-weight:700; letter-spacing:.3px; padding:9px 18px; border-radius:8px; border:none; cursor:pointer; transition:opacity .15s,transform .15s,box-shadow .15s; box-shadow:0 4px 20px rgba(212,168,67,.2); white-space:nowrap; }
+.sd-gold-btn:hover{ opacity:.9; transform:translateY(-1px); box-shadow:0 8px 28px rgba(212,168,67,.3); }
 .sd-gold-btn:active{ transform:translateY(0); }
 .sd-gold-btn.sm{ padding:7px 13px; font-size:11px; }
-.sd-ghost-btn{ display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.04); border:1px solid var(--bd); color:var(--t2); font-family:'Syne',sans-serif; font-size:11.5px; font-weight:600; padding:9px 16px; border-radius:8px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.sd-ghost-btn{ display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.04); border:1px solid var(--bd); color:var(--t2); font-family:'Plus Jakarta Sans',sans-serif; font-size:11.5px; font-weight:600; padding:9px 16px; border-radius:8px; cursor:pointer; transition:all .15s; white-space:nowrap; }
 .sd-ghost-btn:hover{ border-color:var(--gold4); color:var(--t1); }
 
 /* manage menu */
 .sd-manage-wrap{ position:relative; }
 .sd-manage-menu{ position:absolute; top:calc(100% + 6px); right:0; min-width:195px; background:var(--card); border:1px solid var(--bd); border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.04); z-index:80; overflow:hidden; animation:dropDown .18s cubic-bezier(.16,1,.3,1); }
 @keyframes dropDown{ from{opacity:0;transform:translateY(-8px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-.sd-mm-item{ display:flex; align-items:center; gap:9px; width:100%; padding:10px 14px; font-size:12px; font-weight:500; color:var(--t2); background:none; border:none; cursor:pointer; text-align:left; font-family:'Syne',sans-serif; transition:background .1s; white-space:nowrap; }
+.sd-mm-item{ display:flex; align-items:center; gap:9px; width:100%; padding:10px 14px; font-size:12px; font-weight:500; color:var(--t2); background:none; border:none; cursor:pointer; text-align:left; font-family:'Plus Jakarta Sans',sans-serif; transition:background .1s; white-space:nowrap; }
 .sd-mm-item:hover{ background:rgba(255,255,255,.04); color:var(--t1); }
 .sd-mm-item.danger{ color:#f87171; }
 .sd-mm-item.danger:hover{ background:rgba(248,113,113,.08); }
@@ -920,12 +941,12 @@ function SD() {
 .sd-stat-val{ font-family:'Cormorant Garamond',serif; font-size:clamp(22px,2.5vw,28px); font-weight:600; color:var(--t1); line-height:1; margin-bottom:8px; letter-spacing:-.3px; }
 .sd-stat-sub{ font-size:11px; color:var(--t3); }
 .sd-stat-bar{ position:absolute; bottom:0; left:0; right:0; height:2px; background:rgba(255,255,255,.04); }
-.sd-stat-bar-fill{ height:100%; width:100%; background:linear-gradient(90deg,var(--ac,#C5A454),transparent); opacity:.65; }
+.sd-stat-bar-fill{ height:100%; width:100%; background:linear-gradient(90deg,var(--ac,#d4a843),transparent); opacity:.65; }
 
 /* ── tabs ── */
 .sd-tabs{ display:flex; align-items:center; gap:2px; border-bottom:1px solid var(--bd); margin-bottom:24px; overflow-x:auto; animation:sdUp .5s cubic-bezier(.16,1,.3,1) .38s both; -ms-overflow-style:none; scrollbar-width:none; }
 .sd-tabs::-webkit-scrollbar{ display:none; }
-.sd-tab{ display:flex; align-items:center; gap:6px; position:relative; padding:10px 14px 12px; font-size:11.5px; font-weight:600; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; white-space:nowrap; font-family:'Syne',sans-serif; }
+.sd-tab{ display:flex; align-items:center; gap:6px; position:relative; padding:10px 14px 12px; font-size:11.5px; font-weight:600; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; white-space:nowrap; font-family:'Plus Jakarta Sans',sans-serif; }
 .sd-tab:hover{ color:var(--t2); }
 .sd-tab.on{ color:var(--t1); }
 .sd-tab-indicator{ position:absolute; bottom:-1px; left:0; right:0; height:2px; background:var(--gold); border-radius:2px 2px 0 0; animation:slideIn .2s ease; }
@@ -940,8 +961,8 @@ function SD() {
 .sd-card-hd{ display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
 .sd-card-hd-flush{ display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--bd); }
 .sd-card-title{ font-size:13px; font-weight:700; color:var(--t1); letter-spacing:.1px; margin:0; }
-.sd-select-sm{ background:rgba(255,255,255,.04); border:1px solid var(--bd); border-radius:6px; padding:5px 10px; font-size:11.5px; color:var(--t2); outline:none; cursor:pointer; font-family:'Syne',sans-serif; }
-.sd-link-btn{ display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--gold); background:none; border:none; cursor:pointer; font-family:'Syne',sans-serif; }
+.sd-select-sm{ background:rgba(255,255,255,.04); border:1px solid var(--bd); border-radius:6px; padding:5px 10px; font-size:11.5px; color:var(--t2); outline:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; }
+.sd-link-btn{ display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--gold); background:none; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* chart */
 .sd-chart-wrap{ height:240px; }
@@ -960,7 +981,7 @@ function SD() {
 .sd-table td.green{ color:#34d399; }
 .sd-table td.red{ color:#f87171; }
 .sd-table tbody tr{ transition:background .15s; cursor:default; }
-.sd-table tbody tr:hover td{ background:rgba(197,164,84,.03); }
+.sd-table tbody tr:hover td{ background:rgba(212,168,67,.03); }
 .sd-table tbody tr:last-child td{ border-bottom:none; }
 .sd-table-empty{ text-align:center; padding:40px; color:var(--t3); font-size:13px; }
 .sd-type-badge{ display:inline-block; font-size:10px; font-weight:700; text-transform:capitalize; padding:2px 8px; border-radius:20px; }
@@ -1019,8 +1040,8 @@ function SD() {
 @media(max-width:900px){.sd-notes-grid{grid-template-columns:1fr;}}
 .sd-notes-main{ display:flex; flex-direction:column; gap:12px; }
 .sd-note-compose{ display:flex; gap:10px; align-items:flex-end; }
-.sd-textarea{ flex:1; background:rgba(255,255,255,.04); border:1px solid var(--bd); border-radius:8px; padding:10px 12px; font-size:13px; color:var(--t1); font-family:'Syne',sans-serif; resize:vertical; outline:none; transition:border-color .15s,box-shadow .15s; }
-.sd-textarea:focus{ border-color:var(--gold4); box-shadow:0 0 0 3px rgba(197,164,84,.06); }
+.sd-textarea{ flex:1; background:rgba(255,255,255,.04); border:1px solid var(--bd); border-radius:8px; padding:10px 12px; font-size:13px; color:var(--t1); font-family:'Plus Jakarta Sans',sans-serif; resize:vertical; outline:none; transition:border-color .15s,box-shadow .15s; }
+.sd-textarea:focus{ border-color:var(--gold4); box-shadow:0 0 0 3px rgba(212,168,67,.06); }
 .sd-notes-list{ display:flex; flex-direction:column; gap:10px; }
 .sd-note-card{ background:var(--card); border:1px solid var(--bd); border-radius:var(--r); padding:16px 18px; }
 .sd-note-text{ font-size:13px; color:var(--t1); line-height:1.6; margin:0 0 8px; }
@@ -1035,7 +1056,7 @@ function SD() {
 /* ── modal ── */
 .sd-ov{ position:fixed; inset:0; background:rgba(0,0,0,.8); display:flex; align-items:center; justify-content:center; z-index:300; backdrop-filter:blur(10px); padding:16px; animation:fadeIn .18s ease; }
 @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
-.sd-modal{ background:var(--card); border:1px solid rgba(255,255,255,.1); border-radius:20px; width:100%; max-width:510px; max-height:90vh; overflow-y:auto; box-shadow:0 40px 100px rgba(0,0,0,.8),0 0 0 1px rgba(197,164,84,.06); animation:modalPop .22s cubic-bezier(.16,1,.3,1); }
+.sd-modal{ background:var(--card); border:1px solid rgba(255,255,255,.1); border-radius:20px; width:100%; max-width:510px; max-height:90vh; overflow-y:auto; box-shadow:0 40px 100px rgba(0,0,0,.8),0 0 0 1px rgba(212,168,67,.06); animation:modalPop .22s cubic-bezier(.16,1,.3,1); }
 @keyframes modalPop{ from{opacity:0;transform:scale(.95) translateY(14px)} to{opacity:1;transform:scale(1) translateY(0)} }
 .sd-modal-hd{ display:flex; align-items:center; justify-content:space-between; padding:22px 24px 0; }
 .sd-modal-title{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:600; color:var(--t1); }
@@ -1049,8 +1070,8 @@ function SD() {
 .sd-ml{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--t3); }
 .sd-mreq{ color:var(--gold); margin-left:2px; }
 .sd-r2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.sd-inp{ background:rgba(255,255,255,.04); border:1px solid var(--bd); border-radius:8px; padding:9px 12px; font-size:13px; font-family:'Syne',sans-serif; color:var(--t1); outline:none; width:100%; box-sizing:border-box; transition:border-color .15s,box-shadow .15s; -webkit-appearance:none; }
-.sd-inp:focus{ border-color:var(--gold4); background:rgba(197,164,84,.04); box-shadow:0 0 0 3px rgba(197,164,84,.06); }
+.sd-inp{ background:rgba(255,255,255,.04); border:1px solid var(--bd); border-radius:8px; padding:9px 12px; font-size:13px; font-family:'Plus Jakarta Sans',sans-serif; color:var(--t1); outline:none; width:100%; box-sizing:border-box; transition:border-color .15s,box-shadow .15s; -webkit-appearance:none; }
+.sd-inp:focus{ border-color:var(--gold4); background:rgba(212,168,67,.04); box-shadow:0 0 0 3px rgba(212,168,67,.06); }
 .sd-alert-banner{ display:flex; align-items:flex-start; gap:8px; padding:11px 14px; border-radius:9px; font-size:12.5px; line-height:1.5; }
 .sd-alert-banner.red{ background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.25); color:#f87171; }
 .sd-runway-hint{ display:flex; justify-content:space-between; align-items:center; background:var(--gold3); border:1px solid var(--gold4); border-radius:8px; padding:10px 14px; }
@@ -1066,7 +1087,7 @@ function SD() {
 .sd-skel-line{ border-radius:6px; background:var(--card); animation:shimmer 1.5s infinite; }
 .w-48{ width:192px; } .w-32{ width:128px; } .h-8{ height:32px; } .h-4{ height:16px; } .w-full{ width:100%; } .h-10{ height:40px; } .mt-2{ margin-top:8px; }
 @keyframes shimmer{ 0%{opacity:.4} 50%{opacity:.8} 100%{opacity:.4} }
-.sd-not-found{ text-align:center; padding:80px 20px; color:var(--t3); font-size:13px; font-family:'Syne',sans-serif; }
+.sd-not-found{ text-align:center; padding:80px 20px; color:var(--t3); font-size:13px; font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* ── utils ── */
 .mono{ font-family:'DM Mono',monospace !important; } .semi{ font-weight:600; }

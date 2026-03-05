@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Plus, X, Download,
     ChevronLeft, ChevronRight, Search,
@@ -23,7 +23,7 @@ const STAGE_COLORS: Record<string, { bg: string; color: string; border: string }
     'Series A': { bg: 'rgba(52,211,153,.08)', color: '#34d399', border: 'rgba(52,211,153,.2)' },
     'Series B': { bg: 'rgba(96,165,250,.08)', color: '#60a5fa', border: 'rgba(96,165,250,.2)' },
     'Series C': { bg: 'rgba(249,115,22,.08)', color: '#f97316', border: 'rgba(249,115,22,.2)' },
-    'Growth': { bg: 'rgba(197,164,84,.08)', color: '#C5A454', border: 'rgba(197,164,84,.2)' },
+    'Growth': { bg: 'rgba(212,168,67,.08)', color: '#d4a843', border: 'rgba(212,168,67,.2)' },
     'Pre-IPO': { bg: 'rgba(236,72,153,.08)', color: '#ec4899', border: 'rgba(236,72,153,.2)' },
 };
 
@@ -33,6 +33,7 @@ type ViewMode = 'table' | 'grid';
 
 export default function PortfolioPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const queryClient = useQueryClient();
 
     const [search, setSearch] = useState('');
@@ -47,6 +48,24 @@ export default function PortfolioPage() {
     const [openDrop, setOpenDrop] = useState<string | null>(null);
     const PAGE_SIZE = 8;
 
+    // Check query params for showing Add Investment Modal
+    useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        if (queryParams.get('add') === 'true') {
+            setShowAdd(true);
+        }
+    }, [location.search]);
+
+    // Handle closing and clearing the query param via replace
+    const handleCloseAddModal = () => {
+        setShowAdd(false);
+        const queryParams = new URLSearchParams(location.search);
+        if (queryParams.has('add')) {
+            queryParams.delete('add');
+            navigate({ pathname: location.pathname, search: queryParams.toString() }, { replace: true });
+        }
+    };
+
     const { data: startups, isLoading } = useQuery({
         queryKey: ['startups'],
         queryFn: async () => { const r = await startupsAPI.getAll(); return r.data.data; },
@@ -54,7 +73,7 @@ export default function PortfolioPage() {
 
     const createMutation = useMutation({
         mutationFn: (d: any) => startupsAPI.create(d),
-        onSuccess: () => { invalidateInvestmentQueries(queryClient); setShowAdd(false); toast.success('Investment added'); },
+        onSuccess: () => { invalidateInvestmentQueries(queryClient); handleCloseAddModal(); toast.success('Investment added'); },
         onError: (e: any) => toast.error(e.response?.data?.error?.message || 'Failed to add'),
     });
 
@@ -105,7 +124,7 @@ export default function PortfolioPage() {
         <>
             <PortfolioStyles />
             <EmptyState onAdd={() => setShowAdd(true)}>
-                {showAddModal && <AddInvestmentModal onClose={() => setShowAdd(false)} onSubmit={(d: any) => createMutation.mutate(d)} isLoading={createMutation.isPending} />}
+                {showAddModal && <AddInvestmentModal onClose={handleCloseAddModal} onSubmit={(d: any) => createMutation.mutate(d)} isLoading={createMutation.isPending} />}
             </EmptyState>
         </>
     );
@@ -133,7 +152,7 @@ export default function PortfolioPage() {
 
                 {/* ── Stat Strip ── */}
                 <div className="pf-stats">
-                    <StatCard label="Total Deployed" value={formatCurrencyCompact(paiseToRupees(totalInvested))} sub={`${(startups || []).length} companies`} accent="#C5A454" index={0} />
+                    <StatCard label="Total Deployed" value={formatCurrencyCompact(paiseToRupees(totalInvested))} sub={`${(startups || []).length} companies`} accent="#d4a843" index={0} />
                     <StatCard
                         label="Portfolio Value"
                         value={formatCurrencyCompact(paiseToRupees(currentValue))}
@@ -205,14 +224,14 @@ export default function PortfolioPage() {
                 ) : (
                     <>
                         <div className="pf-grid">{paginated.map((s: any, i: number) => (
-                            <CardItem key={s._id} startup={s} index={i} onClick={() => navigate(`/portfolio/${s._id}`)} />
+                            <CardItem key={s.id || s._id} startup={s} index={i} onClick={() => navigate(`/portfolio/${s.id || s._id}`)} />
                         ))}</div>
                         <PaginationBar page={page} totalPages={totalPages} totalCount={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
                     </>
                 )}
             </div>
 
-            {showAddModal && <AddInvestmentModal onClose={() => setShowAdd(false)} onSubmit={(d: any) => createMutation.mutate(d)} isLoading={createMutation.isPending} />}
+            {showAddModal && <AddInvestmentModal onClose={handleCloseAddModal} onSubmit={(d: any) => createMutation.mutate(d)} isLoading={createMutation.isPending} />}
         </>
     );
 }
@@ -284,7 +303,7 @@ function TableView({ rows, sortKey, onSort, onRowClick, page, totalPages, totalC
                             const up = s.metrics.currentValue >= s.metrics.invested;
                             const stage = STAGE_COLORS[s.stage] || { bg: 'rgba(255,255,255,.05)', color: 'var(--t3)', border: 'rgba(255,255,255,.08)' };
                             return (
-                                <tr key={s._id} onClick={() => onRowClick(s._id)} style={{ animationDelay: `${i * 30}ms` }} className="pf-tr-in">
+                                <tr key={s.id || s._id} onClick={() => onRowClick(s.id || s._id)} style={{ animationDelay: `${i * 30}ms` }} className="pf-tr-in">
                                     <td>
                                         <div className="pf-co-cell">
                                             <div className="pf-avatar" style={{
@@ -306,7 +325,7 @@ function TableView({ rows, sortKey, onSort, onRowClick, page, totalPages, totalC
                                     <td className="num">
                                         <div className="pf-moic-cell">
                                             <div className="pf-moic-track"><div className="pf-moic-fill" style={{ width: `${Math.min(100, (moic / 5) * 100)}%` }} /></div>
-                                            <span className="mono fw" style={{ color: moic >= 1 ? '#C5A454' : '#f87171' }}>{moic.toFixed(2)}×</span>
+                                            <span className="mono fw" style={{ color: moic >= 1 ? '#d4a843' : '#f87171' }}>{moic.toFixed(2)}×</span>
                                         </div>
                                     </td>
                                     <td className="num mono fw" style={{ color: (s.metrics.xirr || 0) >= 0 ? '#34d399' : '#f87171' }}>{formatPercent(s.metrics.xirr)}</td>
@@ -322,7 +341,7 @@ function TableView({ rows, sortKey, onSort, onRowClick, page, totalPages, totalC
         </div>
     );
 }
-const SortIcon = ({ k, sk }: { k: string; sk: string }) => <ArrowUpDown size={10} style={{ opacity: sk === k ? 1 : .3, color: sk === k ? '#C5A454' : 'currentColor', marginLeft: 3, verticalAlign: 'middle' }} />;
+const SortIcon = ({ k, sk }: { k: string; sk: string }) => <ArrowUpDown size={10} style={{ opacity: sk === k ? 1 : .3, color: sk === k ? '#d4a843' : 'currentColor', marginLeft: 3, verticalAlign: 'middle' }} />;
 
 /* ── Card Item ── */
 function CardItem({ startup: s, index: i, onClick }: any) {
@@ -349,7 +368,7 @@ function CardItem({ startup: s, index: i, onClick }: any) {
                 {[
                     { l: 'Cost', v: formatCurrencyCompact(paiseToRupees(s.metrics.invested)), c: 'var(--t2)' },
                     { l: 'Value', v: formatCurrencyCompact(paiseToRupees(s.metrics.currentValue)), c: up ? '#34d399' : '#f87171' },
-                    { l: 'MOIC', v: `${(s.metrics.moic || 0).toFixed(2)}×`, c: (s.metrics.moic || 0) >= 1 ? '#C5A454' : '#f87171' },
+                    { l: 'MOIC', v: `${(s.metrics.moic || 0).toFixed(2)}×`, c: (s.metrics.moic || 0) >= 1 ? '#d4a843' : '#f87171' },
                     { l: 'IRR', v: formatPercent(s.metrics.xirr), c: (s.metrics.xirr || 0) >= 0 ? '#34d399' : '#f87171' },
                 ].map(m => (
                     <div key={m.l} className="pf-metric-box">
@@ -427,8 +446,8 @@ function AddInvestmentModal({ onClose, onSubmit, isLoading }: { onClose: () => v
     const F = (k: string) => (e: any) => setForm({ ...form, [k]: e.target.value });
 
     return (
-        <div className="pf-overlay" onClick={onClose}>
-            <div className="pf-modal" onClick={e => e.stopPropagation()}>
+        <div className="pf-overlay" onMouseDown={onClose}>
+            <div className="pf-modal" onMouseDown={e => e.stopPropagation()}>
                 <div className="pf-modal-head">
                     <span className="pf-modal-title">New Investment</span>
                     <button className="pf-modal-close" onClick={onClose}><X size={16} /></button>
@@ -506,9 +525,9 @@ function PortfolioStyles() {
 
 /* ── Tokens ── */
 :root {
-    --gold:    #C5A454;
-    --gold-lt: rgba(197,164,84,.15);
-    --gold-bd: rgba(197,164,84,.25);
+    --gold:    #d4a843;
+    --gold-lt: rgba(212,168,67,.15);
+    --gold-bd: rgba(212,168,67,.25);
     --bg:      var(--color-bg, #080f1a);
     --card:    var(--color-card-bg, #0c1520);
     --bd:      var(--color-border-light, rgba(255,255,255,.07));
@@ -646,7 +665,7 @@ function PortfolioStyles() {
 
 .pf-tr-in { animation: fadeSlideUp .4s cubic-bezier(.16,1,.3,1) both; }
 .pf-table tbody tr { transition:background .18s; cursor:pointer; }
-.pf-table tbody tr:hover td { background:rgba(197,164,84,.04); }
+.pf-table tbody tr:hover td { background:rgba(212,168,67,.04); }
 .pf-table tbody tr:last-child td { border-bottom:none; }
 
 /* ── Co cell ── */
@@ -681,8 +700,8 @@ function PortfolioStyles() {
     padding:20px; cursor:pointer; transition:border-color .2s, transform .2s, box-shadow .2s;
     overflow:hidden;
 }
-.pf-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(197,164,84,.04),transparent 60%); opacity:0; transition:opacity .2s; }
-.pf-card:hover { border-color:var(--gold-bd); transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,.4),0 0 0 1px rgba(197,164,84,.1); }
+.pf-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(212,168,67,.04),transparent 60%); opacity:0; transition:opacity .2s; }
+.pf-card:hover { border-color:var(--gold-bd); transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,.4),0 0 0 1px rgba(212,168,67,.1); }
 .pf-card:hover::before { opacity:1; }
 
 .pf-card-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; gap:8px; }
@@ -749,7 +768,7 @@ function PortfolioStyles() {
     outline:none; width:100%; box-sizing:border-box; transition:border-color .15s;
     -webkit-appearance:none;
 }
-.pf-input:focus { border-color:var(--gold-bd); background:rgba(197,164,84,.04); }
+.pf-input:focus { border-color:var(--gold-bd); background:rgba(212,168,67,.04); }
 .pf-select { cursor:pointer; }
 .pf-implied { display:flex; justify-content:space-between; align-items:center; background:var(--gold-lt); border:1px solid var(--gold-bd); border-radius:var(--r-sm); padding:11px 14px; }
 .pf-implied span:first-child { font-size:11.5px; color:var(--t2); }
@@ -762,3 +781,4 @@ function PortfolioStyles() {
         `}</style>
     );
 }
+

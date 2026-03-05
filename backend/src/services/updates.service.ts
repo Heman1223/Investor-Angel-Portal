@@ -13,10 +13,14 @@ export async function getUpdates(investorId: string, startupId: string) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
 
-    return prisma.monthlyUpdate.findMany({
+    const updates = await prisma.monthlyUpdate.findMany({
         where: { startupId },
         orderBy: { month: 'desc' }
     });
+    return updates.map(u => ({
+        ...u,
+        createdAt: u.createdAt.toISOString()
+    }));
 }
 
 export async function getAllUpdates(investorId: string) {
@@ -34,9 +38,10 @@ export async function getAllUpdates(investorId: string) {
         const { startup, ...rest } = u;
         return {
             ...rest,
+            createdAt: u.createdAt.toISOString(),
             // Replicate Mongoose `.populate('startupId')` behavior
             startupId: startup ? {
-                _id: startup.id,
+                id: startup.id,
                 name: startup.name,
                 sector: startup.sector
             } : u.startupId

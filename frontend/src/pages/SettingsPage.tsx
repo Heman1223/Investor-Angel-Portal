@@ -20,14 +20,14 @@ export default function SettingsPage() {
     return (
         <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div>
-                <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>Settings</h1>
+                <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Settings</h1>
                 <p style={{ fontSize: 13, marginTop: 4, color: 'var(--color-text-secondary)' }}>Manage your account and preferences</p>
             </div>
 
             {/* Tabs */}
             <div style={{
                 display: 'flex', gap: 4, padding: 4, borderRadius: 12,
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(197,164,84,0.1)',
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,168,67,0.1)',
                 overflowX: 'auto', WebkitOverflowScrolling: 'touch',
             }}>
                 {TABS.map(tab => (
@@ -38,8 +38,8 @@ export default function SettingsPage() {
                             display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
                             borderRadius: 8, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
                             fontFamily: "var(--font-body, 'Inter', sans-serif)",
-                            background: activeTab === tab.id ? 'rgba(197,164,84,0.12)' : 'transparent',
-                            color: activeTab === tab.id ? '#C5A454' : 'var(--color-text-muted)',
+                            background: activeTab === tab.id ? 'rgba(212,168,67,0.12)' : 'transparent',
+                            color: activeTab === tab.id ? '#d4a843' : 'var(--color-text-muted)',
                             transition: 'all 0.15s',
                         }}
                     >
@@ -235,7 +235,7 @@ function AuditLogTab() {
                     </thead>
                     <tbody>
                         {data?.logs?.map((log: any) => (
-                            <tr key={log._id}>
+                            <tr key={log.id}>
                                 <td style={{ padding: '12px 20px' }}>
                                     <span className="badge badge-blue" style={{ fontSize: 11, padding: '2px 8px' }}>
                                         {log.action.replace(/_/g, ' ')}

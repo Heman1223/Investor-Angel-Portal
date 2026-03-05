@@ -19,6 +19,7 @@ export const updateStartupSchema = z.object({
     name: z.string().min(1).trim().optional(),
     sector: z.string().min(1).optional(),
     stage: z.enum(['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'Pre-IPO']).optional(),
+    investmentDate: z.string().refine(d => !isNaN(Date.parse(d)), 'Invalid date').optional(),
     description: z.string().optional(),
     website: z.string().url().optional().or(z.literal('')),
     founderName: z.string().optional(),
@@ -69,7 +70,7 @@ export const alertConfigSchema = z.object({
 // ── Cashflow ledger schemas ──
 
 export const addCashflowSchema = z.object({
-    amount: z.number().positive('Amount must be positive'),
+    amount: z.number(),
     date: z.string().refine(d => !isNaN(Date.parse(d)), 'Invalid date'),
     type: z.enum(['investment', 'follow_on', 'exit', 'correction']),
     roundName: z.string().max(200).optional(),
@@ -78,7 +79,7 @@ export const addCashflowSchema = z.object({
 });
 
 export const updateCashflowSchema = z.object({
-    amount: z.number().positive('Amount must be positive').optional(),
+    amount: z.number().optional(),
     date: z.string().refine(d => !isNaN(Date.parse(d)), 'Invalid date').optional(),
     type: z.enum(['investment', 'follow_on', 'exit', 'correction']).optional(),
     roundName: z.string().max(200).optional(),

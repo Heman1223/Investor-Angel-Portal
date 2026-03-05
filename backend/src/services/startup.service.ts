@@ -130,6 +130,9 @@ export async function getAllStartups(investorId: string, status?: string) {
 
         return {
             ...startup,
+            investmentDate: startup.investmentDate.toISOString(),
+            createdAt: startup.createdAt.toISOString(),
+            updatedAt: startup.updatedAt.toISOString(),
             latestRunwayMonths: runwayMap.get(startup.id) ?? null,
             metrics: {
                 invested,
@@ -188,6 +191,9 @@ export async function getStartupById(investorId: string, startupId: string) {
 
     return {
         ...startup,
+        investmentDate: startup.investmentDate.toISOString(),
+        createdAt: startup.createdAt.toISOString(),
+        updatedAt: startup.updatedAt.toISOString(),
         metrics: {
             invested,
             currentValue,
@@ -198,15 +204,19 @@ export async function getStartupById(investorId: string, startupId: string) {
                 ? calculateUnrealisedGain(invested, startup.currentValuation, startup.entryValuation)
                 : 0,
         },
-        cashflows,
-        dilutionEvents,
+        cashflows: cashflows.map(cf => ({ ...cf, date: cf.date.toISOString(), createdAt: cf.createdAt.toISOString(), updatedAt: cf.updatedAt.toISOString() })),
+        dilutionEvents: dilutionEvents.map(de => ({ ...de, date: de.date.toISOString(), createdAt: de.createdAt.toISOString() })),
     };
 }
 
 export async function updateStartup(
     investorId: string,
     startupId: string,
-    data: { name?: string; sector?: string; stage?: string; description?: string; website?: string; founderName?: string; founderEmail?: string; coInvestors?: string },
+    data: {
+        name?: string; sector?: string; stage?: string; description?: string;
+        website?: string; founderName?: string; founderEmail?: string;
+        coInvestors?: string; investmentDate?: string
+    },
     req?: { ip?: string; headers?: Record<string, any> }
 ) {
     const startup = await prisma.startup.findFirst({
@@ -217,9 +227,16 @@ export async function updateStartup(
     }
 
     const oldValue = { ...startup };
+
+    // Convert string date to Date object if provided
+    const updateData: any = { ...data };
+    if (data.investmentDate) {
+        updateData.investmentDate = new Date(data.investmentDate);
+    }
+
     const updatedStartup = await prisma.startup.update({
         where: { id: startup.id },
-        data
+        data: updateData
     });
 
     await writeAuditLog({

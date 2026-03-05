@@ -25,7 +25,7 @@ const DOC_TYPE_COLORS: Record<string, { bg: string; color: string; border: strin
     financial_statement: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.2)' },
     boardResolution: { bg: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: 'rgba(34,211,238,0.2)' },
     legalAgreement: { bg: 'rgba(251,191,36,0.1)', color: '#FBBF24', border: 'rgba(251,191,36,0.2)' },
-    other: { bg: 'rgba(255,255,255,0.05)', color: '#7A8098', border: 'rgba(255,255,255,0.1)' },
+    other: { bg: 'rgba(255,255,255,0.05)', color: '#6b7a94', border: 'rgba(255,255,255,0.1)' },
 };
 
 export default function DocumentsPage() {
@@ -135,9 +135,9 @@ export default function DocumentsPage() {
         if (!search.trim()) return true;
         const q = search.toLowerCase();
         return (
-            doc.fileName.toLowerCase().includes(q) ||
-            (doc.startupId?.name || '').toLowerCase().includes(q) ||
-            (DOC_TYPE_LABELS[doc.documentType] || doc.documentType).toLowerCase().includes(q)
+            (doc?.fileName || '').toLowerCase().includes(q) ||
+            (doc?.startupId?.name || '').toLowerCase().includes(q) ||
+            (DOC_TYPE_LABELS[doc?.documentType] || doc?.documentType || '').toLowerCase().includes(q)
         );
     });
 
@@ -145,27 +145,7 @@ export default function DocumentsPage() {
         return <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{[1, 2, 3].map(i => <div key={i} className="card animate-shimmer" style={{ height: 64 }} />)}</div>;
     }
 
-    if (!documents || documents.length === 0) {
-        return (
-            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-                <div style={{
-                    width: 80, height: 80, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24,
-                    background: 'rgba(197,164,84,0.06)', border: '2px dashed rgba(197,164,84,0.3)',
-                }}>
-                    <FolderOpen size={36} style={{ color: 'var(--color-primary)' }} />
-                </div>
-                <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>
-                    No documents uploaded yet
-                </h2>
-                <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 24 }}>
-                    Organise your investment agreements here.
-                </p>
-                <button title="Upload a new document" className="btn btn-primary" onClick={() => setShowUploadModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <UploadCloud size={16} /> Upload Document
-                </button>
-            </div>
-        );
-    }
+    // We don't want an early return here, since we need to render the Modals at the bottom of the tree so they can be opened.
 
     return (
         <>
@@ -173,7 +153,7 @@ export default function DocumentsPage() {
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                 <div className="doc-header">
                     <div>
-                        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>Documents</h1>
+                        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Documents</h1>
                         <p style={{ fontSize: 13, marginTop: 4, color: 'var(--color-text-secondary)' }}>
                             {filteredDocs.length} of {documents.length} document{documents.length !== 1 ? 's' : ''}{search ? ' matching search' : ''}
                         </p>
@@ -204,7 +184,25 @@ export default function DocumentsPage() {
                     )}
                 </div>
 
-                {filteredDocs.length === 0 ? (
+                {!documents || documents.length === 0 ? (
+                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+                        <div style={{
+                            width: 80, height: 80, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24,
+                            background: 'rgba(212,168,67,0.06)', border: '2px dashed rgba(212,168,67,0.3)',
+                        }}>
+                            <FolderOpen size={36} style={{ color: 'var(--color-primary)' }} />
+                        </div>
+                        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>
+                            No documents uploaded yet
+                        </h2>
+                        <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 24 }}>
+                            Organise your investment agreements here.
+                        </p>
+                        <button title="Upload a new document" className="btn btn-primary" onClick={() => setShowUploadModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <UploadCloud size={16} /> Upload Document
+                        </button>
+                    </div>
+                ) : filteredDocs.length === 0 ? (
                     <div className="card text-center" style={{ padding: '40px 20px', color: 'var(--color-text-muted)' }}>
                         <Search size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
                         <p>No documents match "{search}"</p>
@@ -228,7 +226,7 @@ export default function DocumentsPage() {
                                         const ext = doc.fileName.split('.').pop()?.toLowerCase() || '';
                                         const typeStyle = DOC_TYPE_COLORS[doc.documentType] || DOC_TYPE_COLORS.other;
                                         return (
-                                            <tr key={doc._id || doc.id}>
+                                            <tr key={doc.id || doc.id}>
                                                 <td style={{ padding: '14px 20px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                                         <div style={{
@@ -237,8 +235,8 @@ export default function DocumentsPage() {
                                                             border: `1px solid ${ext === 'pdf' ? 'rgba(248,113,113,0.2)' : ext === 'docx' || ext === 'doc' ? 'rgba(96,165,250,0.2)' : ext === 'png' || ext === 'jpg' || ext === 'jpeg' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.1)'}`,
                                                         }}>
                                                             <span style={{
-                                                                fontSize: 10, fontWeight: 700, fontFamily: "var(--font-mono, 'IBM Plex Mono', monospace)",
-                                                                color: ext === 'pdf' ? '#F87171' : ext === 'docx' || ext === 'doc' ? '#60A5FA' : ext === 'png' || ext === 'jpg' || ext === 'jpeg' ? '#4ADE80' : '#7A8098',
+                                                                fontSize: 10, fontWeight: 700, fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
+                                                                color: ext === 'pdf' ? '#F87171' : ext === 'docx' || ext === 'doc' ? '#60A5FA' : ext === 'png' || ext === 'jpg' || ext === 'jpeg' ? '#4ADE80' : '#6b7a94',
                                                             }}>
                                                                 {ext.toUpperCase()}
                                                             </span>
@@ -263,30 +261,30 @@ export default function DocumentsPage() {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '14px 20px', fontSize: 12, color: 'var(--color-text-muted)' }}>
-                                                    {(doc.fileSizeBytes / 1024).toFixed(0)} KB
+                                                    {(Number(doc?.fileSizeBytes || 0) / 1024).toFixed(0)} KB
                                                 </td>
                                                 <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--color-text-secondary)' }}>
                                                     {formatDate(doc.uploadedAt || doc.createdAt || doc.uploaded_at || doc.date)}
                                                 </td>
                                                 <td style={{ padding: '14px 20px' }}>
                                                     <div style={{ display: 'flex', gap: 4 }}>
-                                                        <button title="Rename document" onClick={() => { setRenameTarget({ id: doc._id || doc.id, fileName: doc.fileName }); setRenameValue(doc.fileName); }}
+                                                        <button title="Rename document" onClick={() => { setRenameTarget({ id: doc.id || doc._id, fileName: doc.fileName }); setRenameValue(doc.fileName); }}
                                                             style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}>
                                                             <Edit3 size={14} />
                                                         </button>
-                                                        <button title="Link to investment" onClick={() => { setLinkTarget({ id: doc._id || doc.id, currentStartupId: doc.startupId?._id || null, fileName: doc.fileName }); setLinkValue(doc.startupId?._id || ''); }}
+                                                        <button title="Link to investment" onClick={() => { setLinkTarget({ id: doc.id || doc._id, currentStartupId: doc.startupId?.id || doc.startupId?._id || null, fileName: doc.fileName }); setLinkValue(doc.startupId?.id || doc.startupId?._id || ''); }}
                                                             style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}>
                                                             <Link2 size={14} />
                                                         </button>
                                                         <button
                                                             title="Download document"
-                                                            onClick={() => handleDownload(doc._id || doc.id, doc.fileName)}
+                                                            onClick={() => handleDownload(doc.id || doc._id, doc.fileName)}
                                                             style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}>
                                                             <Download size={14} />
                                                         </button>
                                                         <button
                                                             title="Delete document"
-                                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: doc._id || doc.id, name: doc.fileName }); }}
+                                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: doc.id || doc._id, name: doc.fileName }); }}
                                                             style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
                                                         >
                                                             <Trash2 size={14} />
@@ -341,7 +339,7 @@ export default function DocumentsPage() {
                     <div className="modal-overlay" onClick={() => setRenameTarget(null)}>
                         <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>Rename Document</h2>
+                                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Rename Document</h2>
                                 <button onClick={() => setRenameTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
                                     <X size={18} />
                                 </button>
@@ -375,9 +373,9 @@ export default function DocumentsPage() {
                 {/* Link to Investment Modal */}
                 {linkTarget && (
                     <div className="modal-overlay" onClick={() => setLinkTarget(null)}>
-                        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+                        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, padding: 32 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>Link to Investment</h2>
+                                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Link to Investment</h2>
                                 <button onClick={() => setLinkTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
                                     <X size={18} />
                                 </button>
@@ -394,7 +392,7 @@ export default function DocumentsPage() {
                                 >
                                     <option value="">No investment (general document)</option>
                                     {startups?.map((s: any) => (
-                                        <option key={s._id} value={s._id}>{s.name}</option>
+                                        <option key={s.id || s.id} value={s.id || s.id}>{s.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -416,9 +414,9 @@ export default function DocumentsPage() {
                 {/* Upload Modal */}
                 {showUploadModal && (
                     <div className="modal-overlay" onClick={() => setShowUploadModal(false)}>
-                        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+                        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, padding: 32 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                                <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>Upload Document</h2>
+                                <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Upload Document</h2>
                                 <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
                                     <X size={20} />
                                 </button>
@@ -434,7 +432,7 @@ export default function DocumentsPage() {
                                     >
                                         <option value="">No investment (general document)</option>
                                         {startups?.map((s: any) => (
-                                            <option key={s._id} value={s._id}>{s.name}</option>
+                                            <option key={s.id || s.id} value={s.id || s.id}>{s.name}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -467,8 +465,8 @@ export default function DocumentsPage() {
                                 </div>
 
                                 <button
-                                    className="btn btn-primary"
-                                    style={{ width: '100%', marginTop: 8 }}
+                                    className="d-btn-primary"
+                                    style={{ width: '100%', marginTop: 8, justifyContent: 'center', padding: '12px', fontSize: '14px' }}
                                     onClick={() => uploadMutation.mutate()}
                                     disabled={uploadMutation.isPending || !uploadData.file}
                                 >

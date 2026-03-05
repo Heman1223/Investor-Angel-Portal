@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkAuth = useCallback(async () => {
         if (checkAuthCalledRef.current) return;
         checkAuthCalledRef.current = true;
-        
+
         try {
             console.log('[Auth] Checking session...');
             const token = sessionStorage.getItem('accessToken');
@@ -135,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('[Auth] User verified:', res.data.data?.email);
             setInvestor(res.data.data);
         } catch (err: any) {
-            console.error('[Auth] Verification failed:', err.message);
+            console.log('[Auth] Check complete (Unauthenticated)');
             setInvestor(null);
             sessionStorage.removeItem('accessToken');
         } finally {

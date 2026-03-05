@@ -8,10 +8,15 @@ export interface AppError extends Error {
 }
 
 export const errorHandler = (err: AppError, _req: Request, res: Response, _next: NextFunction): void => {
-    logger.error('Unhandled error:', { message: err.message, stack: err.stack, code: err.code });
-
     const statusCode = err.statusCode || 500;
     const code = err.code || 'INTERNAL_ERROR';
+
+    if (statusCode === 500) {
+        logger.error('Unhandled server error:', { message: err.message, stack: err.stack, code });
+    } else if (statusCode !== 401 && statusCode !== 404) {
+        logger.warn('Client error:', { message: err.message, code });
+    }
+
     const message = statusCode === 500 ? 'Something went wrong. Please try again.' : err.message;
 
     res.status(statusCode).json({

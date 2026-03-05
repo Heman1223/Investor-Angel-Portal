@@ -86,7 +86,10 @@ export async function getDashboard(req: AuthRequest, res: Response, next: NextFu
         }
 
         activities.sort((a, b) => b.date.getTime() - a.date.getTime());
-        const recentActivity = activities.slice(0, 5);
+        const recentActivity = activities.slice(0, 5).map(a => ({
+            ...a,
+            date: a.date.toISOString(),
+        }));
 
         res.json({
             success: true,

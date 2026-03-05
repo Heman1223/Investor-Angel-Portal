@@ -39,7 +39,7 @@ export default function ScenarioPage() {
     const [foValuation, setFoValuation] = useState('');
 
     const selected = useMemo(() =>
-        startups?.find((s: any) => (s.id || s._id) === selectedId)
+        startups?.find((s: any) => (s.id || s.id) === selectedId)
         , [startups, selectedId]);
 
     const projection = useMemo(() => {
@@ -120,7 +120,7 @@ export default function ScenarioPage() {
                         <select className="select" value={selectedId} onChange={e => { setSelectedId(e.target.value); setExitVal(''); setFoAmount(''); setFoValuation(''); }}>
                             <option value="">Choose...</option>
                             {startups?.filter((s: any) => s.status === 'active').map((s: any) => (
-                                <option key={s.id || s._id} value={s.id || s._id}>{s.name}</option>
+                                <option key={s.id || s.id} value={s.id || s.id}>{s.name}</option>
                             ))}
                         </select>
                     </div>
@@ -134,9 +134,9 @@ export default function ScenarioPage() {
                                     className="btn btn-sm"
                                     style={{
                                         flex: 1,
-                                        background: mode === m.id ? 'rgba(197,164,84,0.15)' : 'transparent',
-                                        color: mode === m.id ? '#C5A454' : 'var(--color-text-muted)',
-                                        border: `1px solid ${mode === m.id ? 'rgba(197,164,84,0.3)' : 'var(--color-border-light)'}`,
+                                        background: mode === m.id ? 'rgba(212,168,67,0.15)' : 'transparent',
+                                        color: mode === m.id ? '#d4a843' : 'var(--color-text-muted)',
+                                        border: `1px solid ${mode === m.id ? 'rgba(212,168,67,0.3)' : 'var(--color-border-light)'}`,
                                         fontSize: 12, padding: '8px 12px',
                                     }}
                                 >{m.label}</button>
@@ -239,7 +239,7 @@ function MetricCompare({ icon, label, current, projected, improved, neutral }: {
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 {current && <ArrowRight size={12} style={{ color: 'var(--color-text-muted)' }} />}
-                <span style={{ fontSize: 22, fontWeight: 700, color, fontFamily: "var(--font-display, 'Syne', sans-serif)" }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color, fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>
                     {projected}
                 </span>
             </div>
