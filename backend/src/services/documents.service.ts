@@ -124,12 +124,12 @@ export async function uploadDocument(
     // Store Cloudinary public_id as fileKey (no fileUrl column needed)
     const createData: Record<string, unknown> = {
         investorId,
-        fileName: file.originalname,
+        fileName: file.originalname || 'untitled',
         fileKey: public_id,
-        fileSizeBytes: file.size,
-        mimeType: file.mimetype,
-        documentType,
-        description,
+        fileSizeBytes: file.size || 0,
+        mimeType: file.mimetype || 'application/octet-stream',
+        documentType: documentType || 'other',
+        description: description || '',
         uploadedBy: investorId,
     };
     if (startupId) {

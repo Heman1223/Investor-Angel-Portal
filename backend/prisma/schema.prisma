@@ -9,38 +9,36 @@ datasource db {
 }
 
 model Investor {
-  id                   String    @id @default(cuid())
+  id                   String              @id @default(cuid())
   name                 String
-  email                String    @unique
+  email                String              @unique
   passwordHash         String
-  role                 String    @default("investor")
-  subscriptionTier     String    @default("solo")
+  role                 String              @default("investor")
+  subscriptionTier     String              @default("solo")
   twoFactorSecret      String?
-  twoFactorEnabled     Boolean   @default(false)
+  twoFactorEnabled     Boolean             @default(false)
   lastLoginAt          DateTime?
   passwordResetToken   String?
   passwordResetExpires DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-
-  startups             Startup[]
-  monthlyUpdates       MonthlyUpdate[]
-  cashflows            Cashflow[]
-  dilutionEvents       DilutionEvent[]
-  documents            Document[]
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
   alerts               Alert[]
   alertConfiguration   AlertConfiguration?
   auditLogs            AuditLog[]
+  cashflows            Cashflow[]
+  dilutionEvents       DilutionEvent[]
+  documents            Document[]
+  monthlyUpdates       MonthlyUpdate[]
+  startups             Startup[]
 }
 
 model Startup {
-  id                   String    @id @default(cuid())
+  id                   String          @id @default(cuid())
   investorId           String
-  investor             Investor  @relation(fields: [investorId], references: [id])
   name                 String
   sector               String
   stage                String
-  status               String    @default("active")
+  status               String          @default("active")
   entryValuation       Float
   currentValuation     Float
   equityPercent        Float
@@ -50,24 +48,22 @@ model Startup {
   website              String?
   founderName          String?
   founderEmail         String?
-  notes                Json?     // Array of { text: string, createdAt: string }
-  coInvestors          String?   // Comma-separated co-investor names
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-
-  monthlyUpdates       MonthlyUpdate[]
+  notes                Json?
+  coInvestors          String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  alerts               Alert[]
   cashflows            Cashflow[]
   dilutionEvents       DilutionEvent[]
   documents            Document[]
-  alerts               Alert[]
+  monthlyUpdates       MonthlyUpdate[]
+  investor             Investor        @relation(fields: [investorId], references: [id])
 }
 
 model MonthlyUpdate {
   id              String   @id @default(cuid())
   startupId       String
-  startup         Startup  @relation(fields: [startupId], references: [id])
   submittedBy     String
-  investor        Investor @relation(fields: [submittedBy], references: [id])
   month           String
   revenue         Float
   burnRate        Float
@@ -80,6 +76,8 @@ model MonthlyUpdate {
   keyChallenges   String?
   helpNeeded      String?
   createdAt       DateTime @default(now())
+  startup         Startup  @relation(fields: [startupId], references: [id])
+  investor        Investor @relation(fields: [submittedBy], references: [id])
 
   @@unique([startupId, month])
 }
@@ -87,9 +85,7 @@ model MonthlyUpdate {
 model Cashflow {
   id              String   @id @default(cuid())
   investorId      String
-  investor        Investor @relation(fields: [investorId], references: [id])
   startupId       String
-  startup         Startup  @relation(fields: [startupId], references: [id])
   amount          Float
   date            DateTime
   type            String
@@ -101,14 +97,14 @@ model Cashflow {
   createdBy       String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  investor        Investor @relation(fields: [investorId], references: [id])
+  startup         Startup  @relation(fields: [startupId], references: [id])
 }
 
 model DilutionEvent {
   id                 String   @id @default(cuid())
   startupId          String
-  startup            Startup  @relation(fields: [startupId], references: [id])
   investorId         String
-  investor           Investor @relation(fields: [investorId], references: [id])
   roundName          String
   date               DateTime
   preDilutionEquity  Float
@@ -117,14 +113,14 @@ model DilutionEvent {
   roundValuation     Float?
   notes              String?
   createdAt          DateTime @default(now())
+  investor           Investor @relation(fields: [investorId], references: [id])
+  startup            Startup  @relation(fields: [startupId], references: [id])
 }
 
 model Document {
   id            String   @id @default(cuid())
   startupId     String?
-  startup       Startup?  @relation(fields: [startupId], references: [id])
   investorId    String
-  investor      Investor @relation(fields: [investorId], references: [id])
   fileName      String
   fileKey       String   @unique
   fileSizeBytes Int
@@ -134,26 +130,27 @@ model Document {
   uploadedBy    String
   isArchived    Boolean  @default(false)
   uploadedAt    DateTime @default(now())
+  investor      Investor @relation(fields: [investorId], references: [id])
+  startup       Startup? @relation(fields: [startupId], references: [id])
 }
 
 model Alert {
   id          String    @id @default(cuid())
   investorId  String
-  investor    Investor  @relation(fields: [investorId], references: [id])
   startupId   String
-  startup     Startup   @relation(fields: [startupId], references: [id])
   alertType   String
   severity    String
   message     String
   isRead      Boolean   @default(false)
   triggeredAt DateTime  @default(now())
   resolvedAt  DateTime?
+  investor    Investor  @relation(fields: [investorId], references: [id])
+  startup     Startup   @relation(fields: [startupId], references: [id])
 }
 
 model AlertConfiguration {
   id                      String   @id @default(cuid())
   investorId              String   @unique
-  investor                Investor @relation(fields: [investorId], references: [id])
   runwayWarningMonths     Int      @default(6)
   runwayCriticalMonths    Int      @default(3)
   revenueDropWarningPct   Float    @default(15)
@@ -161,12 +158,12 @@ model AlertConfiguration {
   irrNegativeThresholdPct Float    @default(-20)
   moicWarningThreshold    Float    @default(0.75)
   updatedAt               DateTime @updatedAt
+  investor                Investor @relation(fields: [investorId], references: [id])
 }
 
 model AuditLog {
   id         String   @id @default(cuid())
   investorId String
-  investor   Investor @relation(fields: [investorId], references: [id])
   action     String
   entityType String
   entityId   String
@@ -175,4 +172,5 @@ model AuditLog {
   ipAddress  String?
   userAgent  String?
   createdAt  DateTime @default(now())
+  investor   Investor @relation(fields: [investorId], references: [id])
 }

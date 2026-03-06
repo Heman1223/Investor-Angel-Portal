@@ -177,7 +177,7 @@ export default function DocumentsPage() {
                     <div>
                         <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Documents</h1>
                         <p style={{ fontSize: 13, marginTop: 4, color: 'var(--color-text-secondary)' }}>
-                            {filteredDocs.length} of {documents.length} document{documents.length !== 1 ? 's' : ''}{search ? ' matching search' : ''}
+                            {filteredDocs.length} of {documents?.length || 0} document{(documents?.length || 0) !== 1 ? 's' : ''}{search ? ' matching search' : ''}
                         </p>
                     </div>
                     <button title="Upload a new document" className="btn btn-primary" onClick={() => setShowUploadModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -414,7 +414,7 @@ export default function DocumentsPage() {
                                 >
                                     <option value="">No investment (general document)</option>
                                     {startups?.map((s: any) => (
-                                        <option key={s.id || s.id} value={s.id || s.id}>{s.name}</option>
+                                        <option key={s.id || s._id} value={s.id || s._id}>{s.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -454,7 +454,7 @@ export default function DocumentsPage() {
                                     >
                                         <option value="">No investment (general document)</option>
                                         {startups?.map((s: any) => (
-                                            <option key={s.id || s.id} value={s.id || s.id}>{s.name}</option>
+                                            <option key={s.id || s._id} value={s.id || s._id}>{s.name}</option>
                                         ))}
                                     </select>
                                 </div>

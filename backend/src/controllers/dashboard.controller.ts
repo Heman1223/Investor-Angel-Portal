@@ -77,10 +77,11 @@ export async function getDashboard(req: AuthRequest, res: Response, next: NextFu
             });
         }
         for (const doc of recentDocuments) {
+            const documentType = doc.documentType || 'other';
             activities.push({
                 type: 'document',
-                date: doc.uploadedAt,
-                description: `${doc.documentType.replace(/_/g, ' ')} uploaded: ${doc.fileName}`,
+                date: doc.uploadedAt || new Date(),
+                description: `${documentType.replace(/_/g, ' ')} uploaded: ${doc.fileName || 'Untitled'}`,
                 startupName: doc.startup?.name || 'Unknown',
             });
         }

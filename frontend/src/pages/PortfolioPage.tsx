@@ -528,7 +528,7 @@ function Field({ label, required, children }: any) {
 function PortfolioStyles() {
     return (
         <style>{`
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* ── Tokens ── */
 :root {
@@ -540,28 +540,28 @@ function PortfolioStyles() {
     --bd:      var(--color-border-light, rgba(255,255,255,.07));
     --t1:      var(--color-text-primary, #f0ead8);
     --t2:      var(--color-text-secondary, #8b9bb4);
-    --t3:      var(--color-text-muted, #4a5568);
-    --green:   #34d399;
-    --red:     #f87171;
+    --t3:      #3d4f68;
+    --green:   var(--color-green, #34d399);
+    --red:     var(--color-red, #f87171);
     --r-sm:    8px;
     --r-md:    12px;
     --r-lg:    16px;
 }
 
 /* ── Root ── */
-.pf-root { padding: 0 0 64px; font-family:'Outfit',sans-serif; }
+.pf-root { padding: 0 0 64px; font-family: var(--font-body, 'Inter', sans-serif); }
 
 /* ── Header ── */
 .pf-header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:36px; flex-wrap:wrap; gap:16px; }
-.pf-eyebrow { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--gold); margin-bottom:6px; }
-.pf-title { font-family:'DM Serif Display',serif; font-size:32px; font-weight:400; color:var(--t1); letter-spacing:-.5px; line-height:1; }
+.pf-eyebrow { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--gold); margin-bottom:6px; font-family: var(--font-mono, monospace); }
+.pf-title { font-family: var(--font-display, sans-serif); font-size:32px; font-weight:800; color:var(--t1); letter-spacing:-.8px; line-height:1; }
 .pf-header-right { display:flex; gap:10px; align-items:center; }
 
 /* ── Buttons ── */
 .pf-btn-gold {
     display:inline-flex; align-items:center; gap:7px; background:var(--gold);
-    color:#0a0f18; font-size:12px; font-weight:700; letter-spacing:.3px;
-    padding:9px 18px; border-radius:var(--r-sm); border:none; cursor:pointer;
+    color:#0a0f18; font-size:12px; font-weight:700; letter-spacing:.5px;
+    padding:9px 18px; border-radius:var(--radius-md); border:none; cursor:pointer;
     transition:opacity .15s, transform .1s;
 }
 .pf-btn-gold:hover { opacity:.9; transform:translateY(-1px); }
@@ -585,8 +585,8 @@ function PortfolioStyles() {
     animation: fadeSlideUp .5s cubic-bezier(.16,1,.3,1) both;
     animation-delay: calc(var(--i) * 80ms);
 }
-.pf-stat-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1.5px; color:var(--t3); margin-bottom:12px; }
-.pf-stat-value { font-family:'DM Serif Display',serif; font-size:28px; color:var(--t1); line-height:1; margin-bottom:8px; letter-spacing:-.5px; }
+.pf-stat-label { font-family: var(--font-mono, monospace); font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:1.5px; color:var(--t3); margin-bottom:12px; }
+.pf-stat-value { font-family: var(--font-display, sans-serif); font-size:28px; font-weight:800; color:var(--t1); line-height:1; margin-bottom:8px; letter-spacing:-.5px; }
 .pf-stat-sub   { font-size:11px; color:var(--t3); display:flex; align-items:center; }
 .pf-stat-accent-line { position:absolute; bottom:0; left:0; right:0; height:2px; opacity:.7; }
 
@@ -595,7 +595,7 @@ function PortfolioStyles() {
 .pf-search-wrap { display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--bd); border-radius:var(--r-sm); padding:8px 12px; flex:1; min-width:200px; max-width:300px; transition:border-color .15s; }
 .pf-search-wrap:focus-within { border-color:var(--gold-bd); }
 .pf-search-icon { color:var(--t3); flex-shrink:0; }
-.pf-search { background:none; border:none; outline:none; color:var(--t1); font-size:12.5px; font-family:'Outfit',sans-serif; width:100%; }
+.pf-search { background:none; border:none; outline:none; color:var(--t1); font-size:12.5px; font-family: var(--font-body, sans-serif); width:100%; }
 .pf-search::placeholder { color:var(--t3); }
 .pf-search-clear { background:none; border:none; cursor:pointer; color:var(--t3); display:flex; padding:0; }
 .pf-search-clear:hover { color:var(--t1); }
@@ -608,7 +608,7 @@ function PortfolioStyles() {
 .pf-drop-btn {
     display:flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--bd);
     border-radius:var(--r-sm); padding:7px 11px; cursor:pointer; transition:all .15s; white-space:nowrap;
-    font-family:'Outfit',sans-serif;
+    font-family: var(--font-body, sans-serif);
 }
 .pf-drop-btn:hover { border-color:var(--gold-bd); }
 .pf-drop-btn.active { border-color:var(--gold-bd); background:var(--gold-lt); }
@@ -625,7 +625,7 @@ function PortfolioStyles() {
 .pf-drop-item {
     display:flex; align-items:center; gap:8px; width:100%; padding:9px 13px;
     font-size:12px; font-weight:500; color:var(--t2); background:none; border:none;
-    cursor:pointer; text-align:left; font-family:'Outfit',sans-serif; transition:background .1s;
+    cursor:pointer; text-align:left; font-family: var(--font-body, sans-serif); transition:background .1s;
 }
 .pf-drop-item:hover { background:rgba(255,255,255,.04); color:var(--t1); }
 .pf-drop-item.sel { color:var(--gold); font-weight:700; }
@@ -633,7 +633,7 @@ function PortfolioStyles() {
 .pf-clear-btn {
     display:inline-flex; align-items:center; gap:5px; background:none; border:1px solid var(--bd);
     border-radius:var(--r-sm); padding:7px 11px; font-size:11px; font-weight:600; color:var(--t3);
-    cursor:pointer; font-family:'Outfit',sans-serif; transition:all .15s;
+    cursor:pointer; font-family: var(--font-body, sans-serif); transition:all .15s;
 }
 .pf-clear-btn:hover { border-color:var(--gold-bd); color:var(--gold); }
 
@@ -648,7 +648,7 @@ function PortfolioStyles() {
 .pf-sort-pills { display:flex; gap:4px; flex-wrap:wrap; }
 .pf-sort-pill {
     background:none; border:1px solid transparent; border-radius:20px; padding:4px 11px;
-    font-size:11px; font-weight:500; color:var(--t3); cursor:pointer; font-family:'Outfit',sans-serif; transition:all .15s;
+    font-size:11px; font-weight:500; color:var(--t3); cursor:pointer; font-family: var(--font-body, sans-serif); transition:all .15s;
 }
 .pf-sort-pill:hover { border-color:var(--bd); color:var(--t2); }
 .pf-sort-pill.active { border-color:var(--gold-bd); color:var(--gold); background:var(--gold-lt); font-weight:700; }
@@ -659,8 +659,9 @@ function PortfolioStyles() {
 .pf-table { width:100%; border-collapse:collapse; }
 .pf-table thead tr { border-bottom:1px solid var(--bd); }
 .pf-table th {
-    padding:11px 18px; font-size:10px; font-weight:600; text-transform:uppercase;
+    padding:11px 18px; font-size:9.5px; font-weight:600; text-transform:uppercase;
     letter-spacing:1.2px; color:var(--t3); text-align:left; white-space:nowrap;
+    font-family: var(--font-mono, monospace);
 }
 .pf-table th.sort { cursor:pointer; user-select:none; }
 .pf-table th.sort:hover { color:var(--t2); }
@@ -677,7 +678,7 @@ function PortfolioStyles() {
 
 /* ── Co cell ── */
 .pf-co-cell { display:flex; align-items:center; gap:12px; }
-.pf-avatar { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:'DM Serif Display',serif; font-size:16px; flex-shrink:0; }
+.pf-avatar { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-family: var(--font-display, sans-serif); font-size:16px; font-weight:700; flex-shrink:0; }
 .pf-avatar.lg { width:40px; height:40px; font-size:17px; }
 .pf-co-name { font-size:13.5px; font-weight:600; color:var(--t1); margin-bottom:4px; }
 .pf-co-stage { display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.4px; padding:2px 8px; border-radius:20px; text-transform:uppercase; }
@@ -728,7 +729,7 @@ function PortfolioStyles() {
 .pf-pag-btn {
     width:30px; height:30px; border-radius:var(--r-sm); border:1px solid var(--bd);
     background:rgba(255,255,255,.02); color:var(--t3); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; font-size:11.5px; font-weight:600; font-family:'Outfit',sans-serif; transition:all .15s;
+    cursor:pointer; font-size:11.5px; font-weight:600; font-family: var(--font-body, sans-serif); transition:all .15s;
 }
 .pf-pag-btn:hover:not(:disabled) { border-color:var(--gold-bd); color:var(--t1); }
 .pf-pag-btn:disabled { opacity:.3; cursor:default; }
@@ -748,7 +749,7 @@ function PortfolioStyles() {
 /* ── Empty ── */
 .pf-empty-root { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:65vh; gap:12px; }
 .pf-empty-icon { width:72px; height:72px; border-radius:18px; border:1.5px dashed var(--gold-bd); background:var(--gold-lt); display:flex; align-items:center; justify-content:center; color:var(--gold); margin-bottom:8px; }
-.pf-empty-title { font-family:'DM Serif Display',serif; font-size:24px; color:var(--t1); margin:0; }
+.pf-empty-title { font-family: var(--font-display, sans-serif); font-size:24px; font-weight:800; color:var(--t1); margin:0; }
 .pf-empty-sub { font-size:13px; color:var(--t2); margin:0 0 8px; text-align:center; max-width:300px; }
 
 /* ── Modal ── */
@@ -757,7 +758,7 @@ function PortfolioStyles() {
 .pf-modal { background:var(--card); border:1px solid rgba(255,255,255,.1); border-radius:20px; width:100%; max-width:500px; max-height:92vh; overflow-y:auto; box-shadow:0 32px 80px rgba(0,0,0,.7); animation:modalIn .2s cubic-bezier(.16,1,.3,1); }
 @keyframes modalIn { from{opacity:0;transform:scale(.97) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
 .pf-modal-head { display:flex; align-items:center; justify-content:space-between; padding:22px 24px 0; }
-.pf-modal-title { font-family:'DM Serif Display',serif; font-size:20px; color:var(--t1); }
+.pf-modal-title { font-family: var(--font-display, sans-serif); font-size:22px; font-weight:800; color:var(--t1); }
 .pf-modal-close { background:rgba(255,255,255,.06); border:1px solid var(--bd); border-radius:8px; cursor:pointer; color:var(--t2); width:30px; height:30px; display:flex; align-items:center; justify-content:center; transition:all .15s; }
 .pf-modal-close:hover { background:rgba(255,255,255,.1); color:var(--t1); }
 .pf-modal-body { padding:20px 24px 24px; display:flex; flex-direction:column; gap:14px; }
@@ -771,7 +772,7 @@ function PortfolioStyles() {
 .pf-row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .pf-input {
     background:rgba(255,255,255,.04); border:1px solid var(--bd); border-radius:var(--r-sm);
-    padding:10px 12px; font-size:13px; font-family:'Outfit',sans-serif; color:var(--t1);
+    padding:10px 12px; font-size:13px; font-family: var(--font-body, sans-serif); color:var(--t1);
     outline:none; width:100%; box-sizing:border-box; transition:border-color .15s;
     -webkit-appearance:none;
 }
