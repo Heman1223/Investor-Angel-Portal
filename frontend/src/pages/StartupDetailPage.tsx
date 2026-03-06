@@ -217,6 +217,8 @@ export default function StartupDetailPage() {
                         { lbl: 'Current Value', raw: paiseToRupees(m.currentValue), fmt: (x: number) => formatCurrencyCompact(x), sub: m.currentValue > m.invested ? `↑ +${formatPercent((m.currentValue - m.invested) / m.invested)}` : '—', accent: m.currentValue >= m.invested ? '#34d399' : '#f87171', subColor: m.currentValue >= m.invested ? '#34d399' : '#f87171', idx: 1 },
                         { lbl: 'Multiple (MOIC)', raw: m.moic * 100, fmt: (x: number) => `${(x / 100).toFixed(2)}×`, sub: m.moic >= 1 ? `↑ +${(m.moic - 1).toFixed(1)}× vs invested` : `↓ ${(m.moic - 1).toFixed(1)}× below par`, accent: m.moic >= 1 ? '#d4a843' : '#f87171', subColor: m.moic >= 1 ? '#d4a843' : '#f87171', idx: 2 },
                         { lbl: 'Net IRR', raw: Math.abs((m.xirr || 0) * 100), fmt: (x: number) => `${(m.xirr || 0) < 0 ? '-' : ''}${(x).toFixed(1)}%`, sub: (m.xirr || 0) > 0 ? '↑ Top decile performance' : '—', accent: (m.xirr || 0) >= 0 ? '#34d399' : '#f87171', subColor: (m.xirr || 0) >= 0 ? '#34d399' : '#f87171', idx: 3 },
+                        { lbl: 'CAGR', raw: Math.abs((m.cagr || 0) * 100), fmt: (x: number) => `${(m.cagr || 0) < 0 ? '-' : ''}${(x).toFixed(1)}%`, sub: (m.cagr || 0) > 0.15 ? '↑ Strong growth' : (m.cagr || 0) > 0 ? '↑ Positive growth' : '—', accent: (m.cagr || 0) >= 0 ? '#60a5fa' : '#f87171', subColor: (m.cagr || 0) >= 0 ? '#60a5fa' : '#f87171', idx: 4 },
+                        { lbl: 'TVPI', raw: (m.invested > 0 ? m.currentValue / m.invested : 0) * 100, fmt: (x: number) => `${(x / 100).toFixed(2)}×`, sub: (m.invested > 0 ? m.currentValue / m.invested : 0) >= 1 ? '↑ Value above paid-in' : '↓ Below paid-in capital', accent: (m.invested > 0 ? m.currentValue / m.invested : 0) >= 1 ? '#a78bfa' : '#f87171', subColor: (m.invested > 0 ? m.currentValue / m.invested : 0) >= 1 ? '#a78bfa' : '#f87171', idx: 5 },
                     ].map(c => (
                         <div key={c.lbl} className="sd-stat" style={{ '--ac': c.accent, '--idx': c.idx } as any}>
                             <div className="sd-stat-shine" />
@@ -887,7 +889,7 @@ function SD() {
 .sd-bc-active{ color:var(--t1); font-weight:600; }
 
 /* ── header ── */
-.sd-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:32px; flex-wrap:wrap; animation:sdUp .55s cubic-bezier(.16,1,.3,1) .1s both; }
+.sd-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:32px; flex-wrap:wrap; animation:sdUp .55s cubic-bezier(.16,1,.3,1) .1s both; position:relative; z-index:10; }
 .sd-header-identity{ display:flex; align-items:flex-start; gap:16px; flex:1; }
 .sd-avatar-wrap{ position:relative; flex-shrink:0; }
 .sd-avatar{ width:60px; height:60px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:600; }
@@ -930,7 +932,7 @@ function SD() {
 .sd-mm-div{ height:1px; background:var(--bd); margin:4px 0; }
 
 /* ── stat cards ── */
-.sd-stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+.sd-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:28px; }
 @media(max-width:900px){.sd-stats{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:480px){.sd-stats{grid-template-columns:1fr;}}
 .sd-stat{ position:relative; overflow:hidden; background:var(--card); border:1px solid var(--bd); border-radius:var(--r); padding:22px 20px 18px; animation:sdUp .5s cubic-bezier(.16,1,.3,1) both; animation-delay:calc(var(--idx)*80ms + 200ms); transition:border-color .2s,transform .2s,box-shadow .2s; }

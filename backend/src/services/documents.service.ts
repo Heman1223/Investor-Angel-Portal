@@ -1,15 +1,60 @@
-import path from 'path';
-import fs from 'fs';
+import { v2 as cloudinary } from 'cloudinary';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../db';
 import { createAppError } from '../middleware/errorHandler';
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+// ── Cloudinary Configuration ──────────────────────────────────
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-// Ensure upload directory exists
-if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const CLOUDINARY_FOLDER_PREFIX = 'angel-portal/';
+
+/**
+ * Upload a buffer to Cloudinary.
+ * Uses `resource_type: 'raw'` so PDFs, docs, spreadsheets etc. are accepted.
+ * Returns { public_id, secure_url }.
+ */
+function uploadToCloudinary(
+    buffer: Buffer,
+    folder: string,
+    publicId: string
+): Promise<{ public_id: string; secure_url: string }> {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            {
+                resource_type: 'raw',
+                folder: `angel-portal/${folder}`,
+                public_id: publicId,
+                overwrite: true,
+            },
+            (error, result) => {
+                if (error) return reject(error);
+                if (!result) return reject(new Error('Cloudinary returned empty result'));
+                resolve({ public_id: result.public_id, secure_url: result.secure_url });
+            }
+        );
+        stream.end(buffer);
+    });
 }
+
+/**
+ * Check if a fileKey is a Cloudinary public_id (vs a local file path).
+ */
+function isCloudinaryKey(fileKey: string): boolean {
+    return fileKey.startsWith(CLOUDINARY_FOLDER_PREFIX);
+}
+
+/**
+ * Build a Cloudinary raw delivery URL from a public_id.
+ */
+function buildCloudinaryUrl(publicId: string): string {
+    return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/${publicId}`;
+}
+
+// ── Service Functions ─────────────────────────────────────────
 
 export async function getDocuments(investorId: string, startupId: string) {
     const startup = await prisma.startup.findFirst({
@@ -67,20 +112,20 @@ export async function uploadDocument(
     }
 
     const folder = startupId || 'general';
-    const uniqueFileName = `${uuidv4()}-${file.originalname}`;
-    const fileKey = `${folder}/${uniqueFileName}`;
-    const filePath = path.join(UPLOAD_DIR, folder);
+    const uniqueId = `${uuidv4()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
 
-    if (!fs.existsSync(filePath)) {
-        fs.mkdirSync(filePath, { recursive: true });
-    }
+    // Upload to Cloudinary
+    const { public_id } = await uploadToCloudinary(
+        file.buffer,
+        folder,
+        uniqueId
+    );
 
-    fs.writeFileSync(path.join(filePath, uniqueFileName), file.buffer);
-
+    // Store Cloudinary public_id as fileKey (no fileUrl column needed)
     const createData: Record<string, unknown> = {
         investorId,
         fileName: file.originalname,
-        fileKey,
+        fileKey: public_id,
         fileSizeBytes: file.size,
         mimeType: file.mimetype,
         documentType,
@@ -106,6 +151,17 @@ export async function getDownloadUrl(investorId: string, documentId: string) {
         throw createAppError('Document not found', 404, 'NOT_FOUND');
     }
 
+    // If fileKey is a Cloudinary public_id, build URL from it
+    if (isCloudinaryKey(doc.fileKey)) {
+        return {
+            fileName: doc.fileName,
+            mimeType: doc.mimeType,
+            downloadUrl: buildCloudinaryUrl(doc.fileKey),
+            expiresIn: 'permanent',
+        };
+    }
+
+    // Fallback for legacy local-disk docs
     return {
         fileName: doc.fileName,
         mimeType: doc.mimeType,
@@ -120,6 +176,15 @@ export async function archiveDocument(investorId: string, documentId: string) {
     });
     if (!doc) {
         throw createAppError('Document not found', 404, 'NOT_FOUND');
+    }
+
+    // Delete from Cloudinary if it's a cloud-stored file (best-effort)
+    if (isCloudinaryKey(doc.fileKey)) {
+        try {
+            await cloudinary.uploader.destroy(doc.fileKey, { resource_type: 'raw' });
+        } catch (e) {
+            console.warn(`[Cloudinary] Failed to delete ${doc.fileKey}:`, e);
+        }
     }
 
     const updatedDoc = await prisma.document.update({
@@ -178,6 +243,25 @@ export async function getFile(investorId: string, documentId: string) {
         throw createAppError('Document not found', 404, 'NOT_FOUND');
     }
 
+    // If fileKey is a Cloudinary public_id, fetch from Cloudinary
+    if (isCloudinaryKey(doc.fileKey)) {
+        const cloudUrl = buildCloudinaryUrl(doc.fileKey);
+        const response = await fetch(cloudUrl);
+        if (!response.ok) {
+            throw createAppError('Failed to fetch file from cloud storage', 502, 'CLOUD_FETCH_ERROR');
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        return {
+            buffer: Buffer.from(arrayBuffer),
+            fileName: doc.fileName,
+            mimeType: doc.mimeType
+        };
+    }
+
+    // Fallback for legacy local-disk files
+    const path = await import('path');
+    const fs = await import('fs');
+    const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
     const filePath = path.join(UPLOAD_DIR, doc.fileKey);
     if (!fs.existsSync(filePath)) {
         throw createAppError('File not found on disk', 404, 'NOT_FOUND');

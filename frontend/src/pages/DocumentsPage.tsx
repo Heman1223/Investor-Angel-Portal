@@ -84,7 +84,8 @@ export default function DocumentsPage() {
             setUploadData({ startupId: '', documentType: 'other', file: null });
         },
         onError: (err: any) => {
-            toast.error(err.response?.data?.error || 'Failed to upload document');
+            const errMsg = err.response?.data?.error?.message || err.response?.data?.error || 'Failed to upload document';
+            toast.error(typeof errMsg === 'string' ? errMsg : 'Failed to upload document');
         },
     });
 
@@ -116,6 +117,27 @@ export default function DocumentsPage() {
 
     const handleDownload = async (id: string, fileName: string) => {
         try {
+            // Get the download URL (may be a Cloudinary URL)
+            const urlRes = await documentsAPI.download(id);
+            const downloadUrl = urlRes.data?.data?.downloadUrl;
+
+            if (downloadUrl && downloadUrl.startsWith('http')) {
+                // Cloudinary / external URL — fetch as blob and trigger download
+                const response = await fetch(downloadUrl);
+                if (!response.ok) throw new Error('Download failed');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                return;
+            }
+
+            // Fallback: proxy through backend /file endpoint
             const fileRes = await documentsAPI.downloadRawFile(id);
             const blob = new Blob([fileRes.data], { type: fileRes.headers['content-type'] });
             const url = window.URL.createObjectURL(blob);
@@ -226,7 +248,7 @@ export default function DocumentsPage() {
                                         const ext = doc.fileName.split('.').pop()?.toLowerCase() || '';
                                         const typeStyle = DOC_TYPE_COLORS[doc.documentType] || DOC_TYPE_COLORS.other;
                                         return (
-                                            <tr key={doc.id || doc.id}>
+                                            <tr key={doc.id}>
                                                 <td style={{ padding: '14px 20px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                                         <div style={{

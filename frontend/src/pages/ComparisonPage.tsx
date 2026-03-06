@@ -177,6 +177,8 @@ export default function ComparisonPage() {
                                     { label: 'Current Value', render: (s: any) => formatCurrencyCompact(paiseToRupees(s.metrics.currentValue)), color: (s: any) => s.metrics.currentValue >= s.metrics.invested ? 'var(--color-green, #34D399)' : 'var(--color-red, #ef4444)' },
                                     { label: 'MOIC', render: (s: any) => formatMOIC(s.metrics.moic), color: (s: any) => (s.metrics.moic || 0) >= 1 ? 'var(--color-primary)' : 'var(--color-red, #ef4444)' },
                                     { label: 'IRR', render: (s: any) => formatPercent(s.metrics.xirr), color: (s: any) => (s.metrics.xirr || 0) >= 0 ? 'var(--color-green, #34D399)' : 'var(--color-red, #ef4444)' },
+                                    { label: 'CAGR', render: (s: any) => formatPercent(s.metrics.cagr), color: (s: any) => (s.metrics.cagr || 0) >= 0 ? 'var(--color-green, #34D399)' : 'var(--color-red, #ef4444)' },
+                                    { label: 'TVPI', render: (s: any) => { const tvpi = s.metrics.invested > 0 ? s.metrics.currentValue / s.metrics.invested : 0; return `${tvpi.toFixed(2)}×`; }, color: (s: any) => (s.metrics.invested > 0 ? s.metrics.currentValue / s.metrics.invested : 0) >= 1 ? 'var(--color-primary, #A78BFA)' : 'var(--color-red, #ef4444)' },
                                     { label: 'Sector', render: (s: any) => s.sector, color: () => 'var(--color-text-primary)' },
                                     { label: 'Stage', render: (s: any) => s.stage, color: () => 'var(--color-text-primary)' },
                                     { label: 'Equity %', render: (s: any) => `${(s.currentEquityPercent ?? s.equityPercent ?? 0).toFixed(2)}%`, color: () => 'var(--color-text-primary)' },

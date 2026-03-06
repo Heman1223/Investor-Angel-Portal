@@ -42,6 +42,14 @@ export function formatMOIC(value: number | null | undefined): string {
 }
 
 /**
+ * Format TVPI (Total Value to Paid-In Capital)
+ */
+export function formatTVPI(value: number | null | undefined): string {
+    if (value == null || isNaN(value)) return '—';
+    return `${value.toFixed(2)}×`;
+}
+
+/**
  * Format percentage (IRR, CAGR, revenue change)
  */
 export function formatPercent(value: number | null | undefined): string {

@@ -12,7 +12,7 @@ import {
     FileText, Clock
 } from 'lucide-react';
 import { dashboardAPI, alertsAPI } from '../services/api';
-import { formatCurrencyCompact, formatMOIC, formatPercent, formatDate, paiseToRupees } from '../utils/formatters';
+import { formatCurrencyCompact, formatMOIC, formatPercent, formatDate, formatTVPI, paiseToRupees } from '../utils/formatters';
 
 // ── Animated Number Component ──────────────────────────────
 const AnimatedNumber = ({ value, formatter = (v: number) => String(v), duration = 1200 }: { value: number, formatter?: (v: number) => string, duration?: number }) => {
@@ -140,6 +140,7 @@ export default function DashboardPage() {
         { label: 'Current Value', rawValue: paiseToRupees(d.currentPortfolioValue), formatter: formatCurrencyCompact, icon: TrendingUp, accent: '#4ADE80', bg: 'rgba(74,222,128,0.1)', change: '+24.8%', up: true },
         { label: 'Portfolio IRR', rawValue: d.portfolioXIRR || 0, formatter: formatPercent, icon: Activity, accent: '#d4a843', bg: 'rgba(197,164,84,0.1)', change: d.portfolioXIRR > 0 ? '+2.1%' : '—', up: d.portfolioXIRR > 0 },
         { label: 'MOIC', rawValue: d.portfolioMOIC, formatter: formatMOIC, icon: Target, accent: '#A78BFA', bg: 'rgba(167,139,250,0.1)', change: d.portfolioMOIC >= 1 ? `${formatMOIC(d.portfolioMOIC)}` : '—', up: d.portfolioMOIC >= 1 },
+        { label: 'TVPI', rawValue: d.portfolioTVPI || 0, formatter: formatTVPI, icon: Target, accent: '#FB923C', bg: 'rgba(251,146,60,0.1)', change: (d.portfolioTVPI || 0) >= 1 ? `${formatTVPI(d.portfolioTVPI)}` : '—', up: (d.portfolioTVPI || 0) >= 1 },
         { label: 'Active Startups', rawValue: d.activeCount, formatter: (v: number) => String(Math.round(v)), icon: Rocket, accent: '#4ADE80', bg: 'rgba(74,222,128,0.1)', change: null, up: true },
         { label: 'Exits', rawValue: d.exitedCount, formatter: (v: number) => String(Math.round(v)), icon: CheckCircle2, accent: '#60A5FA', bg: 'rgba(96,165,250,0.1)', change: null, up: true },
     ];
@@ -551,7 +552,7 @@ const DASHBOARD_CSS = `
 .d-btn-primary:hover::before { opacity:1; }
 
 /* METRIC GRID */
-.d-metric-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:14px; }
+.d-metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
 @media (max-width:1200px) { .d-metric-grid { grid-template-columns:repeat(3,1fr); } }
 @media (max-width:700px) { .d-metric-grid { grid-template-columns:repeat(2,1fr); } }
 

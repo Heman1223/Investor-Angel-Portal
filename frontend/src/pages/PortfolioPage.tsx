@@ -27,7 +27,7 @@ const STAGE_COLORS: Record<string, { bg: string; color: string; border: string }
     'Pre-IPO': { bg: 'rgba(236,72,153,.08)', color: '#ec4899', border: 'rgba(236,72,153,.2)' },
 };
 
-type SortKey = 'name' | 'invested' | 'currentValue' | 'xirr' | 'moic';
+type SortKey = 'name' | 'invested' | 'currentValue' | 'xirr' | 'moic' | 'cagr';
 type ViewMode = 'table' | 'grid';
 
 
@@ -86,7 +86,7 @@ export default function PortfolioPage() {
         if (stageFilter) l = l.filter((s: any) => s.stage === stageFilter);
         l.sort((a: any, b: any) => {
             if (sortKey === 'name') return sortDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-            const map: Record<string, string> = { invested: 'metrics.invested', currentValue: 'metrics.currentValue', xirr: 'metrics.xirr', moic: 'metrics.moic' };
+            const map: Record<string, string> = { invested: 'metrics.invested', currentValue: 'metrics.currentValue', xirr: 'metrics.xirr', moic: 'metrics.moic', cagr: 'metrics.cagr' };
             const get = (o: any, p: string) => p.split('.').reduce((x, k) => x?.[k], o) || 0;
             const av = get(a, map[sortKey]), bv = get(b, map[sortKey]);
             return sortDir === 'asc' ? av - bv : bv - av;
@@ -108,11 +108,12 @@ export default function PortfolioPage() {
 
     const handleExport = () => {
         if (!startups) return;
-        const h = ['Company', 'Sector', 'Stage', 'Status', 'Invested', 'Value', 'MOIC', 'IRR'];
+        const h = ['Company', 'Sector', 'Stage', 'Status', 'Invested', 'Value', 'MOIC', 'IRR', 'CAGR', 'TVPI'];
         const rows = startups.map((s: any) => [
             `"${s.name}"`, `"${s.sector}"`, `"${s.stage}"`, `"${s.status}"`,
             `"${paiseToRupees(s.metrics.invested)}"`, `"${paiseToRupees(s.metrics.currentValue)}"`,
-            `"${s.metrics.moic}x"`, `"${formatPercent(s.metrics.xirr)}"`
+            `"${s.metrics.moic}x"`, `"${formatPercent(s.metrics.xirr)}"`,
+            `"${formatPercent(s.metrics.cagr)}"`, `"${(s.metrics.invested > 0 ? s.metrics.currentValue / s.metrics.invested : 0).toFixed(2)}x"`
         ].join(','));
         const blob = new Blob([[h.join(','), ...rows].join('\n')], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -199,9 +200,9 @@ export default function PortfolioPage() {
                 <div className="pf-meta">
                     <span className="pf-meta-count">{filtered.length} {filtered.length === 1 ? 'company' : 'companies'}{hasFilters ? ' · filtered' : ''}</span>
                     <div className="pf-sort-pills">
-                        {(['invested', 'currentValue', 'moic', 'xirr', 'name'] as SortKey[]).map(k => (
+                        {(['invested', 'currentValue', 'moic', 'xirr', 'cagr', 'name'] as SortKey[]).map(k => (
                             <button key={k} className={`pf-sort-pill${sortKey === k ? ' active' : ''}`} onClick={() => toggleSort(k)}>
-                                {k === 'invested' ? 'Cost' : k === 'currentValue' ? 'Value' : k === 'xirr' ? 'IRR' : k === 'moic' ? 'MOIC' : 'Name'}
+                                {k === 'invested' ? 'Cost' : k === 'currentValue' ? 'Value' : k === 'xirr' ? 'IRR' : k === 'moic' ? 'MOIC' : k === 'cagr' ? 'CAGR' : 'Name'}
                                 {sortKey === k && <span className="pf-sort-dir">{sortDir === 'desc' ? '↓' : '↑'}</span>}
                             </button>
                         ))}
@@ -293,6 +294,8 @@ function TableView({ rows, sortKey, onSort, onRowClick, page, totalPages, totalC
                             <th className="sort num" onClick={() => onSort('currentValue')}>Value <SortIcon k="currentValue" sk={sortKey} /></th>
                             <th className="sort num" onClick={() => onSort('moic')}>MOIC <SortIcon k="moic" sk={sortKey} /></th>
                             <th className="sort num" onClick={() => onSort('xirr')}>IRR <SortIcon k="xirr" sk={sortKey} /></th>
+                            <th className="sort num" onClick={() => onSort('cagr')}>CAGR <SortIcon k="cagr" sk={sortKey} /></th>
+                            <th className="num">TVPI</th>
                             <th style={{ textAlign: 'center' }}>Status</th>
                             <th />
                         </tr>
@@ -329,6 +332,8 @@ function TableView({ rows, sortKey, onSort, onRowClick, page, totalPages, totalC
                                         </div>
                                     </td>
                                     <td className="num mono fw" style={{ color: (s.metrics.xirr || 0) >= 0 ? '#34d399' : '#f87171' }}>{formatPercent(s.metrics.xirr)}</td>
+                                    <td className="num mono fw" style={{ color: (s.metrics.cagr || 0) >= 0 ? '#60a5fa' : '#f87171' }}>{formatPercent(s.metrics.cagr)}</td>
+                                    <td className="num mono fw" style={{ color: (s.metrics.invested > 0 ? s.metrics.currentValue / s.metrics.invested : 0) >= 1 ? '#a78bfa' : '#f87171' }}>{(s.metrics.invested > 0 ? s.metrics.currentValue / s.metrics.invested : 0).toFixed(2)}×</td>
                                     <td style={{ textAlign: 'center' }}><StatusPill status={s.status} /></td>
                                     <td><button className="pf-row-link" onClick={e => e.stopPropagation()}><ExternalLink size={13} /></button></td>
                                 </tr>
@@ -370,6 +375,8 @@ function CardItem({ startup: s, index: i, onClick }: any) {
                     { l: 'Value', v: formatCurrencyCompact(paiseToRupees(s.metrics.currentValue)), c: up ? '#34d399' : '#f87171' },
                     { l: 'MOIC', v: `${(s.metrics.moic || 0).toFixed(2)}×`, c: (s.metrics.moic || 0) >= 1 ? '#d4a843' : '#f87171' },
                     { l: 'IRR', v: formatPercent(s.metrics.xirr), c: (s.metrics.xirr || 0) >= 0 ? '#34d399' : '#f87171' },
+                    { l: 'CAGR', v: formatPercent(s.metrics.cagr), c: (s.metrics.cagr || 0) >= 0 ? '#60a5fa' : '#f87171' },
+                    { l: 'TVPI', v: `${(s.metrics.invested > 0 ? s.metrics.currentValue / s.metrics.invested : 0).toFixed(2)}×`, c: (s.metrics.invested > 0 ? s.metrics.currentValue / s.metrics.invested : 0) >= 1 ? '#a78bfa' : '#f87171' },
                 ].map(m => (
                     <div key={m.l} className="pf-metric-box">
                         <div className="pf-metric-label">{m.l}</div>
@@ -706,7 +713,7 @@ function PortfolioStyles() {
 
 .pf-card-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; gap:8px; }
 .pf-card-divider { height:1px; background:var(--bd); margin-bottom:14px; }
-.pf-card-metrics { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.pf-card-metrics { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
 .pf-metric-box { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.04); border-radius:var(--r-sm); padding:10px 12px; }
 .pf-metric-label { font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--t3); margin-bottom:5px; }
 .pf-metric-val { font-family:'DM Mono',monospace; font-size:14px; font-weight:500; }
