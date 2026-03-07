@@ -117,29 +117,8 @@ export default function DocumentsPage() {
 
     const handleDownload = async (id: string, fileName: string) => {
         try {
-            // Get the download URL (may be a Cloudinary URL)
-            const urlRes = await documentsAPI.download(id);
-            const downloadUrl = urlRes.data?.data?.downloadUrl;
-
-            if (downloadUrl && downloadUrl.startsWith('http')) {
-                // Cloudinary / external URL — fetch as blob and trigger download
-                const response = await fetch(downloadUrl);
-                if (!response.ok) throw new Error('Download failed');
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                return;
-            }
-
-            // Fallback: proxy through backend /file endpoint
-            const fileRes = await documentsAPI.downloadRawFile(id);
-            const blob = new Blob([fileRes.data], { type: fileRes.headers['content-type'] });
+            const r = await documentsAPI.downloadRawFile(id);
+            const blob = new Blob([r.data], { type: r.headers['content-type'] });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -325,28 +304,27 @@ export default function DocumentsPage() {
                 {/* Delete Confirmation Modal */}
                 {deleteTarget && (
                     <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
-                        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, padding: 32 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
                                 <div style={{
-                                    width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)',
                                 }}>
-                                    <AlertTriangle size={20} style={{ color: 'var(--color-red)' }} />
+                                    <AlertTriangle size={24} style={{ color: 'var(--color-red)' }} />
                                 </div>
                                 <div>
-                                    <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>Delete Document</h3>
-                                    <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>This action cannot be undone</p>
+                                    <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Delete Document</h3>
+                                    <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 4 }}>This action cannot be undone</p>
                                 </div>
                             </div>
-                            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 20 }}>
-                                Are you sure you want to delete <strong style={{ color: 'var(--color-text-primary)' }}>{deleteTarget.name}</strong>?
+                            <p style={{ fontSize: 14, color: 'var(--cream-80)', marginBottom: 24, lineHeight: 1.6 }}>
+                                Are you sure you want to delete <strong style={{ color: 'var(--cream)', fontWeight: 600 }}>{deleteTarget.name}</strong>?
                             </p>
-                            <div style={{ display: 'flex', gap: 12 }}>
-                                <button onClick={() => setDeleteTarget(null)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                                <button onClick={() => setDeleteTarget(null)} className="btn btn-secondary">Cancel</button>
                                 <button
                                     onClick={() => deleteMutation.mutate(deleteTarget.id)}
                                     className="btn btn-danger"
-                                    style={{ flex: 1 }}
                                     disabled={deleteMutation.isPending}
                                 >
                                     {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
@@ -359,15 +337,15 @@ export default function DocumentsPage() {
                 {/* Rename Modal */}
                 {renameTarget && (
                     <div className="modal-overlay" onClick={() => setRenameTarget(null)}>
-                        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Rename Document</h2>
+                        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, padding: 32 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                                <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Rename Document</h2>
                                 <button onClick={() => setRenameTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
-                                    <X size={18} />
+                                    <X size={20} />
                                 </button>
                             </div>
-                            <div className="form-group" style={{ marginBottom: 20 }}>
-                                <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>File Name</label>
+                            <div className="form-group" style={{ marginBottom: 24 }}>
+                                <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 8 }}>File Name</label>
                                 <input
                                     className="input"
                                     value={renameValue}
@@ -377,12 +355,11 @@ export default function DocumentsPage() {
                                     onKeyDown={e => { if (e.key === 'Enter' && renameValue.trim()) renameMutation.mutate({ id: renameTarget.id, fileName: renameValue.trim() }); }}
                                 />
                             </div>
-                            <div style={{ display: 'flex', gap: 12 }}>
-                                <button onClick={() => setRenameTarget(null)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                                <button onClick={() => setRenameTarget(null)} className="btn btn-secondary">Cancel</button>
                                 <button
                                     onClick={() => renameMutation.mutate({ id: renameTarget.id, fileName: renameValue.trim() })}
                                     className="btn btn-primary"
-                                    style={{ flex: 1 }}
                                     disabled={renameMutation.isPending || !renameValue.trim()}
                                 >
                                     {renameMutation.isPending ? 'Saving...' : 'Save'}
@@ -396,19 +373,19 @@ export default function DocumentsPage() {
                 {linkTarget && (
                     <div className="modal-overlay" onClick={() => setLinkTarget(null)}>
                         <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, padding: 32 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Link to Investment</h2>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                                <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)" }}>Link to Investment</h2>
                                 <button onClick={() => setLinkTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
-                                    <X size={18} />
+                                    <X size={20} />
                                 </button>
                             </div>
-                            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-                                Assign <strong style={{ color: 'var(--color-text-primary)' }}>{linkTarget.fileName}</strong> to an investment, or remove the current link.
+                            <p style={{ fontSize: 14, color: 'var(--cream-80)', marginBottom: 20, lineHeight: 1.6 }}>
+                                Assign <strong style={{ color: 'var(--cream)', fontWeight: 600 }}>{linkTarget.fileName}</strong> to an investment, or remove the current link.
                             </p>
-                            <div className="form-group" style={{ marginBottom: 20 }}>
-                                <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Investment</label>
+                            <div className="form-group" style={{ marginBottom: 24 }}>
+                                <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 8 }}>Investment</label>
                                 <select
-                                    className="input"
+                                    className="select"
                                     value={linkValue}
                                     onChange={e => setLinkValue(e.target.value)}
                                 >
@@ -418,12 +395,11 @@ export default function DocumentsPage() {
                                     ))}
                                 </select>
                             </div>
-                            <div style={{ display: 'flex', gap: 12 }}>
-                                <button onClick={() => setLinkTarget(null)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                                <button onClick={() => setLinkTarget(null)} className="btn btn-secondary">Cancel</button>
                                 <button
                                     onClick={() => linkMutation.mutate({ id: linkTarget.id, startupId: linkValue || null })}
                                     className="btn btn-primary"
-                                    style={{ flex: 1 }}
                                     disabled={linkMutation.isPending}
                                 >
                                     {linkMutation.isPending ? 'Saving...' : 'Update Link'}
@@ -444,11 +420,11 @@ export default function DocumentsPage() {
                                 </button>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Investment <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(optional)</span></label>
+                                    <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 8 }}>Investment <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(optional)</span></label>
                                     <select
-                                        className="input"
+                                        className="select"
                                         value={uploadData.startupId}
                                         onChange={e => setUploadData({ ...uploadData, startupId: e.target.value })}
                                     >
@@ -460,9 +436,9 @@ export default function DocumentsPage() {
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Document Type</label>
+                                    <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 8 }}>Document Type</label>
                                     <select
-                                        className="input"
+                                        className="select"
                                         value={uploadData.documentType}
                                         onChange={e => setUploadData({ ...uploadData, documentType: e.target.value })}
                                     >
@@ -473,7 +449,7 @@ export default function DocumentsPage() {
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>File</label>
+                                    <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 8 }}>File</label>
                                     <input
                                         type="file"
                                         className="input"
@@ -481,13 +457,13 @@ export default function DocumentsPage() {
                                         style={{ padding: '8px 12px' }}
                                         accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.csv"
                                     />
-                                    <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 6, opacity: 0.8 }}>
-                                        Max size: <strong>25MB</strong>. Supported: PDF, Images, Word, Excel, CSV.
+                                    <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8, opacity: 0.8 }}>
+                                        Max size: <strong style={{ color: 'var(--cream-80)' }}>25MB</strong>. Supported: PDF, Images, Word, Excel, CSV.
                                     </p>
                                 </div>
 
                                 <button
-                                    className="d-btn-primary"
+                                    className="btn btn-primary"
                                     style={{ width: '100%', marginTop: 8, justifyContent: 'center', padding: '12px', fontSize: '14px' }}
                                     onClick={() => uploadMutation.mutate()}
                                     disabled={uploadMutation.isPending || !uploadData.file}

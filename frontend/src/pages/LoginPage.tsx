@@ -608,6 +608,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     if (step === 'email') { setStep('password'); return; }
+
+    if (password.length < 8) {
+      const msg = 'Password must be at least 8 characters long';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
     setIsLoading(true);
     try {
       await login(email, password);
@@ -803,7 +811,7 @@ export default function LoginPage() {
                           type={showPassword ? 'text' : 'password'} className="mc-input mc-input-pw"
                           placeholder="Enter your passphrase"
                           value={password} onChange={e => setPassword(e.target.value)}
-                          required autoFocus
+                          required autoFocus minLength={8}
                         />
                         <button type="button" className="mc-eye" onClick={() => setShowPassword(!showPassword)}>
                           {showPassword
