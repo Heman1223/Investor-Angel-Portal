@@ -10,15 +10,24 @@ const INVITE_EXPIRY_DAYS = 7;
  * Only the startup's investor can send invites.
  */
 export async function createInvite(investorId: string, startupId: string, email: string, companyRole: string = 'member') {
-    console.log(`Debug createInvite: investorId=${investorId}, startupId=${startupId}`);
-    // Verify investor owns the startup (legacy check) or has Investment
-    const hasAccess = await prisma.investment.findFirst({
-        where: { investorId, startupId }
-    }) || await prisma.startup.findFirst({ where: { id: startupId, investorId } });
+    console.log(`[DEBUG] createInvite: investorId=${investorId}, startupId=${startupId}`);
 
-    if (!hasAccess) {
-        console.log(`Access check failed for investorId=${investorId}, startupId=${startupId}`);
-        throw createAppError('Startup not found or you do not have access', 404, 'NOT_FOUND');
+    // Verify startup exists first
+    const startupEntity = await prisma.startup.findUnique({ where: { id: startupId } });
+    if (!startupEntity) {
+        console.log(`[DEBUG] Startup matching ID ${startupId} not found in database.`);
+        throw createAppError('Referenced startup not found', 404, 'NOT_FOUND');
+    }
+
+    // Verify investor has access
+    const hasInvestment = await prisma.investment.findFirst({
+        where: { investorId, startupId }
+    });
+    const isOwner = startupEntity.investorId === investorId;
+
+    if (!hasInvestment && !isOwner) {
+        console.log(`[DEBUG] Access denied for investorId=${investorId} on startupId=${startupId}. (Owner=${startupEntity.investorId})`);
+        throw createAppError('You do not have permission to invite users to this startup', 403, 'FORBIDDEN');
     }
 
     // Check if email already belongs to an investor (role confusion prevention)
@@ -57,9 +66,8 @@ export async function createInvite(investorId: string, startupId: string, email:
     });
 
     // Send email notification (stub)
-    const startup = await prisma.startup.findUnique({ where: { id: startupId } });
     const inviteUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/invite/${token}`;
-    await sendInviteEmail(email, startup?.name || 'a startup', inviteUrl).catch(console.error);
+    await sendInviteEmail(email, startupEntity?.name || 'a startup', inviteUrl).catch(console.error);
 
     return { invite, token };
 }
