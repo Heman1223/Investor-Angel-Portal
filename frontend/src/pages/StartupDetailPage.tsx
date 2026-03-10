@@ -10,9 +10,9 @@ import {
     Share2, Edit3, Calendar, ChevronRight, Download,
     Users, StickyNote, Send, ChevronDown, Trash2,
     ArrowUpRight, BarChart2, FileText,
-    GitBranch, Activity
+    GitBranch, Activity, Mail, MessageSquare, ShieldCheck
 } from 'lucide-react';
-import { startupsAPI, updatesAPI, documentsAPI, cashflowsAPI } from '../services/api';
+import { startupsAPI, updatesAPI, documentsAPI, cashflowsAPI, inviteAPI, messagingAPI } from '../services/api';
 import {
     formatCurrencyCompact, formatPercent, formatDate,
     formatMonth, formatRunway, paiseToRupees
@@ -22,7 +22,7 @@ import toast from 'react-hot-toast';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type TabId = 'overview' | 'cashflows' | 'updates' | 'documents' | 'notes' | 'dilution';
+type TabId = 'overview' | 'cashflows' | 'updates' | 'notes' | 'dilution' | 'documents' | 'messaging' | 'team';
 
 const STAGE_CFG: Record<string, { bg: string; color: string; border: string }> = {
     'Pre-Seed': { bg: 'rgba(167,139,250,.09)', color: '#a78bfa', border: 'rgba(167,139,250,.22)' },
@@ -72,6 +72,7 @@ export default function StartupDetailPage() {
     const [showEdit, setShowEdit] = useState(false);
     const [showWriteOff, setShowWriteOff] = useState(false);
     const [showManage, setShowManage] = useState(false);
+    const [showInvite, setShowInvite] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => { setTimeout(() => setMounted(true), 60); }, []);
@@ -126,12 +127,14 @@ export default function StartupDetailPage() {
     const sc = STAGE_CFG[s.stage] || { bg: 'rgba(255,255,255,.06)', color: '#7d8fa6', border: 'rgba(255,255,255,.1)' };
     const hue = s.name.charCodeAt(0) * 13;
 
-    const tabs: { id: TabId; label: string; icon: any }[] = [
+    const tabs: { id: TabId; label: string; icon: any; badge?: boolean }[] = [
         { id: 'overview', label: 'Overview', icon: Activity },
         { id: 'cashflows', label: 'Cashflows', icon: BarChart2 },
-        { id: 'updates', label: 'Monthly Updates', icon: TrendingUp },
+        { id: 'updates', label: 'Monthly Updates', icon: TrendingUp, badge: updates?.some((u: any) => !u.isRead) },
+        { id: 'messaging', label: 'Messaging', icon: MessageSquare },
         { id: 'notes', label: 'Notes', icon: StickyNote },
         { id: 'dilution', label: 'Dilution', icon: GitBranch },
+        { id: 'team', label: 'Team & Access', icon: Users },
         { id: 'documents', label: 'Documents', icon: FileText },
     ];
 
@@ -195,6 +198,9 @@ export default function StartupDetailPage() {
                                         <button className="sd-mm-item" onClick={() => { setShowManage(false); setShowUpdate(true); }}>
                                             <Plus size={13} /> Add Update
                                         </button>
+                                        <button className="sd-mm-item" onClick={() => { setShowManage(false); setShowInvite(true); }}>
+                                            <Mail size={13} /> Invite Company User
+                                        </button>
                                         <div className="sd-mm-div" />
                                         <button className="sd-mm-item danger" onClick={() => { setShowManage(false); setShowExit(true); }}>
                                             <DoorOpen size={13} /> Record Exit
@@ -242,6 +248,7 @@ export default function StartupDetailPage() {
                             <button key={t.id} className={`sd-tab${tab === t.id ? ' on' : ''}`} onClick={() => setTab(t.id)}>
                                 <Icon size={12} />
                                 <span>{t.label}</span>
+                                {t.badge && <span className="sd-new-nav-badge" />}
                                 {tab === t.id && <div className="sd-tab-indicator" />}
                             </button>
                         );
@@ -252,10 +259,12 @@ export default function StartupDetailPage() {
                 <div className="sd-tab-body">
                     {tab === 'overview' && <OverviewTab startup={s} updates={updates} documents={documents} handleDownload={handleDownload} />}
                     {tab === 'cashflows' && <CashflowsTab startup={s} />}
-                    {tab === 'updates' && <UpdatesTab updates={updates} onAddUpdate={() => setShowUpdate(true)} isActive={s.status === 'active'} />}
+                    {tab === 'updates' && <UpdatesTab updates={updates} onAddUpdate={() => setShowUpdate(true)} isActive={s.status === 'active'} startupId={s.id} />}
+                    {tab === 'messaging' && <MessagingTab startupId={s.id} />}
                     {tab === 'documents' && <DocumentsTab documents={documents || []} handleDownload={handleDownload} />}
                     {tab === 'notes' && <NotesTab startup={s} onAddNote={(t: string) => noteMut.mutate(t)} isLoading={noteMut.isPending} />}
                     {tab === 'dilution' && <DilutionTab startup={s} />}
+                    {tab === 'team' && <TeamTab startupId={s.id} />}
                 </div>
             </div>
 
@@ -265,6 +274,7 @@ export default function StartupDetailPage() {
             {showFollowOn && <FollowOnModal onClose={() => setShowFollowOn(false)} onSubmit={(d: any) => followOnMut.mutate(d)} isLoading={followOnMut.isPending} />}
             {showEdit && <EditStartupModal startup={s} onClose={() => setShowEdit(false)} onSubmit={(d: any) => editMut.mutate(d)} isLoading={editMut.isPending} />}
             {showWriteOff && <WriteOffConfirmDialog startupName={s.name} onClose={() => setShowWriteOff(false)} onConfirm={() => writeOffMut.mutate()} isLoading={writeOffMut.isPending} />}
+            {showInvite && <InviteCompanyModal startupId={s.id} onClose={() => setShowInvite(false)} />}
         </>
     );
 }
@@ -461,7 +471,18 @@ function CashflowsTab({ startup }: { startup: any }) {
 }
 
 /* ═══ UPDATES TAB ═══ */
-function UpdatesTab({ updates, onAddUpdate, isActive }: any) {
+function UpdatesTab({ updates, onAddUpdate, isActive, startupId }: any) {
+    const qc = useQueryClient();
+    useEffect(() => {
+        const unreadIds = updates?.filter((u: any) => !u.isRead).map((u: any) => u.id);
+        if (unreadIds && unreadIds.length > 0) {
+            Promise.all(unreadIds.map((id: string) => updatesAPI.markSeen(startupId, id))).then(() => {
+                invalidateInvestmentQueries(qc, startupId);
+                qc.invalidateQueries({ queryKey: ['unreadUpdates'] });
+            });
+        }
+    }, [updates, startupId, qc]);
+
     return (
         <div className="sd-updates-wrap">
             {isActive && (
@@ -476,7 +497,10 @@ function UpdatesTab({ updates, onAddUpdate, isActive }: any) {
                         <tbody>
                             {updates.map((u: any) => (
                                 <tr key={u.id}>
-                                    <td className="semi">{formatMonth(u.month)}</td>
+                                    <td className="semi" style={{ position: 'relative' }}>
+                                        {formatMonth(u.month)}
+                                        {!u.isRead && <span className="sd-new-badge">NEW</span>}
+                                    </td>
                                     <td className="mono">{formatCurrencyCompact(paiseToRupees(u.revenue))}</td>
                                     <td className="mono">{formatCurrencyCompact(paiseToRupees(u.burnRate))}</td>
                                     <td className="mono">{formatCurrencyCompact(paiseToRupees(u.cashBalance))}</td>
@@ -618,6 +642,67 @@ function DilutionTab({ startup }: { startup: any }) {
     );
 }
 
+/* ═══ MESSAGING TAB ═══ */
+function MessagingTab({ startupId }: { startupId: string }) {
+    const qc = useQueryClient();
+    const [msg, setMsg] = useState('');
+    const { data: conv } = useQuery({
+        queryKey: ['conversation', startupId],
+        queryFn: async () => {
+            try {
+                const res = await messagingAPI.getConversationByStartup(startupId);
+                return res.data.data;
+            } catch (e: any) {
+                if (e.response?.status === 404) return null; // No conversation yet
+                throw e;
+            }
+        },
+        refetchInterval: 5000,
+    });
+    const sendMut = useMutation({
+        mutationFn: (text: string) => messagingAPI.sendMessage(startupId, text),
+        onSuccess: () => { setMsg(''); qc.invalidateQueries({ queryKey: ['conversation', startupId] }); },
+        onError: () => toast.error('Failed to send message')
+    });
+
+    useEffect(() => {
+        if (conv?.id) {
+            messagingAPI.markSeenByStartup(startupId).then(() => {
+                qc.invalidateQueries({ queryKey: ['unreadMessages'] });
+            });
+        }
+    }, [conv, startupId, qc]);
+
+    const messages = conv?.messages || [];
+
+    return (
+        <div className="sd-card sd-card-flush" style={{ display: 'flex', flexDirection: 'column', height: 480 }}>
+            <div className="sd-card-hd-flush"><h3 className="sd-card-title">Investor-Company Messages</h3></div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {messages.length === 0 && <p className="sd-empty-text">No messages yet. Send the first message to start the conversation.</p>}
+                {messages.map((m: any) => {
+                    const isMe = m.sender?.role === 'INVESTOR';
+                    return (
+                        <div key={m.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '75%', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ background: isMe ? 'var(--gold2)' : 'rgba(255,255,255,0.05)', color: isMe ? 'var(--gold)' : 'var(--t1)', padding: '10px 14px', borderRadius: 12, borderBottomRightRadius: isMe ? 2 : 12, borderBottomLeftRadius: isMe ? 12 : 2, fontSize: 13, lineHeight: 1.5, border: `1px solid ${isMe ? 'var(--gold4)' : 'var(--bd)'}` }}>
+                                {m.body}
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 4, textAlign: isMe ? 'right' : 'left' }}>
+                                {!isMe && <span style={{ fontWeight: 600, color: 'var(--t2)', marginRight: 6 }}>{m.sender?.name}</span>}
+                                {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+            <div style={{ padding: 16, borderTop: '1px solid var(--bd)', display: 'flex', gap: 10 }}>
+                <input type="text" className="sd-inp" value={msg} onChange={e => setMsg(e.target.value)} placeholder="Type a message to the founders..." onKeyDown={e => e.key === 'Enter' && msg.trim() && sendMut.mutate(msg)} disabled={sendMut.isPending} />
+                <button className="sd-gold-btn" onClick={() => msg.trim() && sendMut.mutate(msg)} disabled={sendMut.isPending || !msg.trim()}><Send size={14} /></button>
+            </div>
+        </div>
+    );
+}
+
 /* ═══════════════ MODALS ═══════════════ */
 
 function Modal({ title, onClose, children, danger }: any) {
@@ -625,7 +710,10 @@ function Modal({ title, onClose, children, danger }: any) {
         <div className="sd-ov" onClick={onClose}>
             <div className="sd-modal" onClick={e => e.stopPropagation()}>
                 <div className="sd-modal-hd">
-                    <span className="sd-modal-title" style={{ color: danger ? '#f87171' : undefined }}>{title}</span>
+                    <div className="sd-modal-hd-inner">
+                        <span className="sd-modal-title" style={{ color: danger ? '#f87171' : undefined }}>{title}</span>
+                        {danger && <div className="sd-danger-tag">CRITICAL</div>}
+                    </div>
                     <button className="sd-modal-x" onClick={onClose}><X size={15} /></button>
                 </div>
                 <div className="sd-modal-body">{children}</div>
@@ -638,7 +726,9 @@ function MF({ label, req, children }: any) {
     return (
         <div className="sd-mf">
             <label className="sd-ml">{label}{req && <span className="sd-mreq">*</span>}</label>
-            {children}
+            <div className="sd-input-group">
+                {children}
+            </div>
         </div>
     );
 }
@@ -646,10 +736,14 @@ function MF({ label, req, children }: any) {
 function ModalFooter({ onClose, onSubmit, loading, label, danger }: any) {
     return (
         <div className="sd-modal-ft">
-            <button className="sd-ghost-btn" onClick={onClose}>Cancel</button>
+            <button className="sd-ghost-btn" onClick={onClose}>Cancel Operation</button>
             <button className="sd-gold-btn" disabled={loading} onClick={onSubmit}
-                style={danger ? { background: '#ef4444', boxShadow: '0 4px 16px rgba(239,68,68,.25)' } : undefined}>
-                {loading ? 'Saving…' : label}
+                style={danger ? { background: '#ef4444', boxShadow: '0 8px 30px rgba(239,68,68,.3)' } : undefined}>
+                {loading ? (
+                    <div className="sd-loader-small">
+                        <span className="sd-spinner-small" /> Processing…
+                    </div>
+                ) : label}
             </button>
         </div>
     );
@@ -857,6 +951,45 @@ function DeleteCashflowConfirm({ cashflow, onClose, onConfirm, isLoading }: any)
                 <MF label="Reason for deletion *"><input className="sd-inp" value={reason} onChange={e => setReason(e.target.value)} placeholder="Required — audit trail" autoFocus /></MF>
             </div>
             <ModalFooter onClose={onClose} loading={isLoading} label="Delete Entry" danger onSubmit={() => { if (reason.trim()) onConfirm(reason); }} />
+        </Modal>
+    );
+}
+
+function InviteCompanyModal({ startupId, onClose }: any) {
+    const qc = useQueryClient();
+    const [email, setEmail] = useState('');
+    const invMut = useMutation({
+        mutationFn: (e: string) => inviteAPI.create(startupId, e),
+        onSuccess: () => { onClose(); toast.success('Founder invite dispatched!'); invalidateInvestmentQueries(qc, startupId); },
+        onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Dispatch failed')
+    });
+
+    return (
+        <Modal title="Onboard Operator" onClose={onClose}>
+            <div className="sd-form-grid">
+                <div className="sd-info-card">
+                    <div className="sd-info-icon"><ShieldCheck size={20} /></div>
+                    <div className="sd-info-text">
+                        <p className="sd-info-title">Secure Provisioning</p>
+                        <p className="sd-info-sub">This will generate a secure one-time link for the founder to establish their operator account and access permissions.</p>
+                    </div>
+                </div>
+                <MF label="WORK EMAIL ADDRESS" req>
+                    <div className="sd-input-pos">
+                        <Mail className="sd-input-float-icon" size={14} />
+                        <input
+                            type="email"
+                            className="sd-inp has-icon"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            required
+                            placeholder="founder@startup.io"
+                            autoFocus
+                        />
+                    </div>
+                </MF>
+            </div>
+            <ModalFooter onClose={onClose} loading={invMut.isPending} label="Dispatch Access Link" onSubmit={() => { if (email.trim()) invMut.mutate(email.trim()); }} />
         </Modal>
     );
 }
@@ -1090,9 +1223,161 @@ function SD() {
 @keyframes shimmer{ 0%{opacity:.4} 50%{opacity:.8} 100%{opacity:.4} }
 .sd-not-found{ text-align:center; padding:80px 20px; color:var(--t3); font-size:13px; font-family: var(--font-body, sans-serif); }
 
+/* ── updates badges ── */
+.sd-new-badge{ background-image: linear-gradient(135deg, #f87171, #ef4444); color: white; display: inline-block; padding: 2px 5px; font-size: 8px; font-weight: 800; border-radius: 4px; margin-left: 6px; vertical-align: middle; box-shadow: 0 2px 6px rgba(248,113,113,0.3); letter-spacing: 0.5px; position: absolute; top: calc(50% - 6px); }
+.sd-new-nav-badge{ width: 6px; height: 6px; border-radius: 50%; background: #f87171; position: absolute; top: 12px; right: 8px; box-shadow: 0 0 8px rgba(248,113,113,0.8); }
+
 /* ── utils ── */
 .mono{ font-family:'DM Mono',monospace !important; } .semi{ font-weight:600; }
 @keyframes sdUp{ from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
         `}</style>
     );
 }
+
+/* ═══ TEAM & ACCESS TAB ═══ */
+function TeamTab({ startupId }: { startupId: string }) {
+    const qc = useQueryClient();
+    const { data: members, isLoading: membersLoading } = useQuery({
+        queryKey: ['startup-members', startupId],
+        queryFn: () => inviteAPI.getMembers(startupId).then(r => r.data.data)
+    });
+
+    const { data: invites, isLoading: invitesLoading } = useQuery({
+        queryKey: ['startup-invites', startupId],
+        queryFn: () => inviteAPI.getAll(startupId).then(r => r.data.data)
+    });
+
+    const resendMut = useMutation({
+        mutationFn: (id: string) => inviteAPI.resend(startupId, id),
+        onSuccess: () => { toast.success('Invite resent'); qc.invalidateQueries({ queryKey: ['startup-invites', startupId] }); },
+        onError: () => toast.error('Failed to resend')
+    });
+
+    const revokeMut = useMutation({
+        mutationFn: (id: string) => inviteAPI.revoke(startupId, id),
+        onSuccess: () => { toast.success('Invite revoked'); qc.invalidateQueries({ queryKey: ['startup-invites', startupId] }); },
+        onError: () => toast.error('Failed to revoke')
+    });
+
+    if (membersLoading || invitesLoading) return <div className="sd-loading-inner">Loading team data...</div>;
+
+    const pendingInvites = Array.isArray(invites) ? invites.filter((i: any) => i.status === 'PENDING') : [];
+
+    return (
+        <div className="sd-team-root">
+            <style>{TEAM_CSS}</style>
+
+            <section className="sd-team-sec">
+                <div className="sd-sec-hd">
+                    <h3 className="sd-sec-title">Authorized Company Users</h3>
+                    <p className="sd-sec-sub">Users with access to manage this startup's portal and submit updates.</p>
+                </div>
+
+                <div className="sd-team-list">
+                    {members?.length === 0 ? (
+                        <div className="sd-team-empty">No company members assigned yet.</div>) : (
+                        members?.map((m: any) => (
+                            <div key={m.id} className="sd-team-card">
+                                <div className="sd-team-info">
+                                    <div className="sd-team-av">{m.user.name[0]}</div>
+                                    <div>
+                                        <div className="sd-team-name">{m.user.name}</div>
+                                        <div className="sd-team-meta">{m.user.email} • {m.role}</div>
+                                    </div>
+                                </div>
+                                <div className="sd-team-badge">ACTIVE</div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </section>
+
+            {pendingInvites.length > 0 && (
+                <section className="sd-team-sec">
+                    <div className="sd-sec-hd">
+                        <h3 className="sd-sec-title">Pending Invitations</h3>
+                        <p className="sd-sec-sub">Sent invites awaiting acceptance from company users.</p>
+                    </div>
+
+                    <div className="sd-team-list">
+                        {pendingInvites.map((i: any) => (
+                            <div key={i.id} className="sd-team-card pending">
+                                <div className="sd-team-info">
+                                    <div className="sd-team-av-pen"><Mail size={14} /></div>
+                                    <div>
+                                        <div className="sd-team-name">{i.email}</div>
+                                        <div className="sd-team-meta">Sent {new Date(i.invitedAt).toLocaleDateString()} • {i.companyRole}</div>
+                                    </div>
+                                </div>
+                                <div className="sd-team-actions">
+                                    <button
+                                        onClick={() => resendMut.mutate(i.id)}
+                                        disabled={resendMut.isPending}
+                                        className="sd-team-btn"
+                                    >Resend</button>
+                                    <button
+                                        onClick={() => revokeMut.mutate(i.id)}
+                                        disabled={revokeMut.isPending}
+                                        className="sd-team-btn danger"
+                                    >Revoke</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+        </div>
+    );
+}
+
+const TEAM_CSS = `
+.sd-team-root { display: flex; flex-direction: column; gap: 40px; }
+.sd-team-sec { display: flex; flex-direction: column; gap: 20px; }
+.sd-sec-hd { display: flex; flex-direction: column; gap: 6px; padding-left: 14px; border-left: 2px solid #d4a843; }
+.sd-sec-title { font-family: var(--font-display); font-size: 15px; font-weight: 800; color: #f0e6d0; letter-spacing: -0.01em; }
+.sd-sec-sub { font-size: 12px; color: #3d4f68; line-height: 1.5; }
+
+.sd-team-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.sd-team-card { 
+  display: flex; align-items: center; justify-content: space-between; 
+  padding: 18px 22px; background: rgba(10, 22, 40, 0.4); border: 1px solid rgba(212, 168, 67, 0.1); border-radius: 16px;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sd-team-card:hover { transform: translateY(-3px); background: rgba(10, 22, 40, 0.6); border-color: rgba(212, 168, 67, 0.25); box-shadow: 0 12px 30px rgba(0,0,0,0.3); }
+
+.sd-team-info { display: flex; align-items: center; gap: 16px; }
+.sd-team-av { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #d4a843, #e8c468); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #060d19; font-size: 15px; box-shadow: 0 4px 12px rgba(212, 168, 67, 0.25); }
+.sd-team-av-pen { width: 42px; height: 42px; border-radius: 12px; background: rgba(107, 122, 148, 0.1); border: 1px solid rgba(107, 122, 148, 0.2); display: flex; align-items: center; justify-content: center; color: #6b7a94; }
+
+.sd-team-name { font-size: 14px; font-weight: 700; color: #f0e6d0; }
+.sd-team-meta { font-size: 11px; color: #3d4f68; margin-top: 3px; font-family: var(--font-mono); }
+
+.sd-team-badge { font-family: var(--font-mono); font-size: 9px; font-weight: 800; color: #34d399; padding: 4px 10px; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.2); border-radius: 20px; letter-spacing: 0.08em; }
+
+.sd-team-actions { display: flex; gap: 10px; }
+.sd-team-btn { 
+  height: 34px; padding: 0 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; 
+  font-size: 11px; font-weight: 700; color: #6b7a94; cursor: pointer; transition: all 0.2s;
+}
+.sd-team-btn:hover { background: rgba(255, 255, 255, 0.08); color: #f0e6d0; border-color: rgba(255,255,255,0.2); }
+.sd-team-btn.danger { color: rgba(248, 113, 113, 0.7); }
+.sd-team-btn.danger:hover { background: rgba(248, 113, 113, 0.1); border-color: #f87171; color: #f87171; }
+
+.sd-team-empty { padding: 48px; text-align: center; color: #3d4f68; font-size: 14px; font-weight: 500; border: 1.5px dashed rgba(212, 168, 67, 0.1); border-radius: 20px; background: rgba(212,168,67,0.02); }
+
+/* Custom Additions for the Modal refined UI */
+.sd-modal-hd-inner { display: flex; align-items: center; gap: 12px; }
+.sd-danger-tag { font-family: var(--font-mono); font-size: 9px; font-weight: 900; color: #ef4444; padding: 2px 6px; border: 1px solid #ef4444; border-radius: 4px; }
+.sd-info-card { display: flex; align-items: flex-start; gap: 16px; padding: 16px; background: rgba(212, 168, 67, 0.06); border: 1px solid rgba(212, 168, 67, 0.15); border-radius: 14px; margin-bottom: 8px; }
+.sd-info-icon { width: 40px; height: 40px; border-radius: 10px; background: rgba(212, 168, 67, 0.1); display: flex; align-items: center; justify-content: center; color: #d4a843; flex-shrink: 0; }
+.sd-info-title { font-size: 13px; font-weight: 700; color: #f0e6d0; margin-bottom: 2px; }
+.sd-info-sub { font-size: 12px; color: #3d4f68; line-height: 1.4; }
+.sd-input-pos { position: relative; display: flex; align-items: center; }
+.sd-input-float-icon { position: absolute; left: 16px; color: #3d4f68; transition: color 0.2s; }
+.sd-inp.has-icon { padding-left: 44px; }
+.sd-inp:focus + .sd-input-float-icon { color: #d4a843; }
+
+.sd-loader-small { display: flex; align-items: center; gap: 8px; }
+.sd-spinner-small { width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.1); border-top-color: #060d19; border-radius: 50%; animation: sd-spin 0.8s linear infinite; }
+@keyframes sd-spin { to { transform: rotate(360deg); } }
+`;

@@ -125,10 +125,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const token = sessionStorage.getItem('accessToken');
             if (!token) {
                 console.log('[Auth] No token found, trying refresh...');
-                const refreshRes = await authAPI.refresh();
-                if (refreshRes.data?.data?.accessToken) {
-                    console.log('[Auth] Refresh successful');
-                    sessionStorage.setItem('accessToken', refreshRes.data.data.accessToken);
+                try {
+                    const refreshRes = await authAPI.refresh();
+                    if (refreshRes.data?.data?.accessToken) {
+                        console.log('[Auth] Refresh successful');
+                        sessionStorage.setItem('accessToken', refreshRes.data.data.accessToken);
+                    }
+                } catch (e) {
+                    console.log('[Auth] Refresh failed (expected if unauthenticated)');
                 }
             }
             const res = await authAPI.me();

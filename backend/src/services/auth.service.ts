@@ -11,7 +11,7 @@ const REFRESH_TOKEN_EXPIRY = '7d';
 
 function generateAccessToken(investor: Investor): string {
     return jwt.sign(
-        { id: investor.id, email: investor.email, role: investor.role },
+        { id: investor.id, email: investor.email, role: investor.role, tokenVersion: investor.tokenVersion },
         process.env.JWT_SECRET!,
         { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
@@ -53,6 +53,171 @@ export async function registerInvestor(name: string, email: string, password: st
             role: investor.role,
             subscriptionTier: investor.subscriptionTier,
         },
+    };
+}
+
+export async function registerCompanyUserLocal(name: string, email: string, password: string) {
+    const existing = await prisma.investor.findUnique({ where: { email: email.toLowerCase() } });
+    if (existing) {
+        throw createAppError('An account with this email already exists', 409, 'CONFLICT');
+    }
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const user = await prisma.investor.create({
+        data: {
+            name,
+            email: email.toLowerCase(),
+            passwordHash,
+            role: 'COMPANY_USER',
+        },
+    });
+
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    return {
+        accessToken,
+        refreshToken,
+        investor: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            subscriptionTier: user.subscriptionTier,
+        },
+    };
+}
+
+export async function registerCompanyUser(name: string, email: string, password: string, inviteToken: string) {
+    // Validate invite token
+    const invite = await prisma.companyInvite.findUnique({ where: { token: inviteToken } });
+    if (!invite) {
+        throw createAppError('Invalid invite token', 400, 'VALIDATION_ERROR');
+    }
+    if (invite.status !== 'PENDING') {
+        throw createAppError(`Invite has already been ${invite.status.toLowerCase()}`, 400, 'VALIDATION_ERROR');
+    }
+    if (new Date() > invite.expiresAt) {
+        // Mark expired
+        await prisma.companyInvite.update({ where: { id: invite.id }, data: { status: 'EXPIRED' } });
+        throw createAppError('Invite token has expired. Please request a new invite.', 400, 'VALIDATION_ERROR');
+    }
+    if (invite.email.toLowerCase() !== email.toLowerCase()) {
+        throw createAppError('Email does not match the invite', 400, 'VALIDATION_ERROR');
+    }
+
+    // Check if email belongs to an existing investor — reject to avoid role confusion
+    const existing = await prisma.investor.findUnique({ where: { email: email.toLowerCase() } });
+    if (existing && existing.role === 'INVESTOR') {
+        throw createAppError(
+            'This email is already registered as an investor account. Please use a different email for company access.',
+            409, 'CONFLICT'
+        );
+    }
+
+    // If existing company user, link to startup directly
+    if (existing && existing.role === 'COMPANY_USER') {
+        const result = await prisma.$transaction(async (tx) => {
+            await tx.companyMembership.create({
+                data: {
+                    userId: existing.id,
+                    startupId: invite.startupId,
+                    role: invite.companyRole,
+                }
+            });
+            await tx.companyInvite.update({
+                where: { id: invite.id },
+                data: { status: 'ACCEPTED', acceptedAt: new Date() }
+            });
+            return existing;
+        });
+
+        const accessToken = generateAccessToken(result);
+        const refreshToken = generateRefreshToken(result);
+        return {
+            accessToken,
+            refreshToken,
+            investor: {
+                id: result.id,
+                name: result.name,
+                email: result.email,
+                role: result.role,
+                subscriptionTier: result.subscriptionTier,
+            },
+        };
+    }
+
+    // New company user registration
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const result = await prisma.$transaction(async (tx) => {
+        const user = await tx.investor.create({
+            data: {
+                name,
+                email: email.toLowerCase(),
+                passwordHash,
+                role: 'COMPANY_USER',
+            },
+        });
+
+        await tx.companyMembership.create({
+            data: {
+                userId: user.id,
+                startupId: invite.startupId,
+                role: invite.companyRole,
+            }
+        });
+
+        await tx.companyInvite.update({
+            where: { id: invite.id },
+            data: { status: 'ACCEPTED', acceptedAt: new Date() }
+        });
+
+        return user;
+    });
+
+    const accessToken = generateAccessToken(result);
+    const refreshToken = generateRefreshToken(result);
+
+    return {
+        accessToken,
+        refreshToken,
+        investor: {
+            id: result.id,
+            name: result.name,
+            email: result.email,
+            role: result.role,
+            subscriptionTier: result.subscriptionTier,
+        },
+    };
+}
+
+export async function getInviteByToken(token: string) {
+    const invite = await prisma.companyInvite.findUnique({
+        where: { token },
+        include: {
+            startup: {
+                select: { name: true }
+            }
+        }
+    });
+
+    if (!invite) {
+        throw createAppError('Invalid invitation link', 404, 'NOT_FOUND');
+    }
+
+    if (invite.status !== 'PENDING') {
+        throw createAppError('This invitation has already been used or revoked', 400, 'BAD_REQUEST');
+    }
+
+    if (invite.expiresAt < new Date()) {
+        throw createAppError('This invitation link has expired', 400, 'BAD_REQUEST');
+    }
+
+    return {
+        email: invite.email,
+        companyRole: invite.companyRole,
+        startupName: invite.startup.name,
+        expiresAt: invite.expiresAt,
     };
 }
 
@@ -168,7 +333,8 @@ export async function resetPassword(email: string, token: string, newPassword: s
         data: {
             passwordHash: newHash,
             passwordResetToken: null,
-            passwordResetExpires: null
+            passwordResetExpires: null,
+            tokenVersion: { increment: 1 }
         }
     });
 
@@ -189,7 +355,10 @@ export async function changePassword(investorId: string, currentPassword: string
     const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
     await prisma.investor.update({
         where: { id: investor.id },
-        data: { passwordHash: newHash }
+        data: {
+            passwordHash: newHash,
+            tokenVersion: { increment: 1 }
+        }
     });
 
     return { message: 'Password changed successfully' };

@@ -36,9 +36,24 @@ async function seed() {
     await prisma.alert.deleteMany({});
     await prisma.alertConfiguration.deleteMany({});
     await prisma.document.deleteMany({});
+
+    // New Messaging & Update Tracking tables
+    await prisma.startupMessageRead.deleteMany({});
+    await prisma.startupMessageAttachment.deleteMany({});
+    await prisma.startupMessage.deleteMany({});
+    await prisma.startupConversation.deleteMany({});
+    await prisma.startupUpdateRead.deleteMany({});
+    await prisma.startupUpdateRevision.deleteMany({});
+
     await prisma.monthlyUpdate.deleteMany({});
     await prisma.dilutionEvent.deleteMany({});
     await prisma.cashflow.deleteMany({});
+
+    // New Company & Auth tables
+    await prisma.companyMembership.deleteMany({});
+    await prisma.companyInvite.deleteMany({});
+    await prisma.investment.deleteMany({});
+
     await prisma.startup.deleteMany({});
     await prisma.investor.deleteMany({});
 
@@ -51,7 +66,7 @@ async function seed() {
             name: 'Arjun Mehta',
             email: 'investor@portfolioos.com',
             passwordHash,
-            role: 'investor',
+            role: 'INVESTOR',
             subscriptionTier: 'solo',
             twoFactorEnabled: false,
         }
@@ -284,7 +299,146 @@ async function seed() {
     });
     console.log('✅ Created RUNWAY_WARNING and RUNWAY_CRITICAL alerts for HealthNode');
 
-    // 7. Create sample documents
+    // 7. Seed Investment records (Multi-investor auth source)
+    for (const startup of startups) {
+        await prisma.investment.create({
+            data: {
+                investorId: investor.id,
+                startupId: startup.id,
+                amount: startup.status === 'exited' ? lakhsToPaise(20) : lakhsToPaise(10), // mock
+                date: new Date('2023-01-01'),
+            }
+        });
+    }
+    console.log('✅ Created Investment records for all startups');
+
+    // 8. Create Company Users & Memberships
+    const companyUserHash = await bcrypt.hash('Company@2024', SALT_ROUNDS);
+
+    // Create a company user for Finly
+    const finlyFounder = await prisma.investor.create({
+        data: {
+            name: 'Ravi Kumar',
+            email: 'ravi@finly.in',
+            passwordHash: companyUserHash,
+            role: 'COMPANY_USER',
+        }
+    });
+
+    const finly = startups.find(s => s.name === 'Finly')!;
+    await prisma.companyMembership.create({
+        data: {
+            userId: finlyFounder.id,
+            startupId: finly.id,
+            role: 'admin',
+        }
+    });
+    console.log('✅ Created company user and membership for Finly (ravi@finly.in / Company@2024)');
+
+    // Create a company user for HealthNode
+    const healthNodeFounder = await prisma.investor.create({
+        data: {
+            name: 'Priya Sharma',
+            email: 'priya@healthnode.io',
+            passwordHash: companyUserHash,
+            role: 'COMPANY_USER',
+        }
+    });
+
+    await prisma.companyMembership.create({
+        data: {
+            userId: healthNodeFounder.id,
+            startupId: healthNode.id,
+            role: 'admin',
+        }
+    });
+    console.log('✅ Created company user and membership for HealthNode (priya@healthnode.io / Company@2024)');
+
+    // 9. Modify Monthly Updates to include Company Submitted + Read Tracking
+    // We already created 3 updates per startup. Let's change the latest one for Finly and HealthNode to be company-submitted.
+    const latestFinlyUpdate = await prisma.monthlyUpdate.findFirst({
+        where: { startupId: finly.id },
+        orderBy: { month: 'desc' }
+    });
+    if (latestFinlyUpdate) {
+        await prisma.monthlyUpdate.update({
+            where: { id: latestFinlyUpdate.id },
+            data: {
+                source: 'COMPANY_SUBMITTED',
+                status: 'SUBMITTED',
+                submittedBy: finlyFounder.id,
+            }
+        });
+        // Create an unread record manually since we bypassed the service
+        // Actually, no read record means it's unread. Let's make the older ones read.
+        const olderFinlyUpdates = await prisma.monthlyUpdate.findMany({
+            where: { startupId: finly.id, id: { not: latestFinlyUpdate.id } }
+        });
+        for (const u of olderFinlyUpdates) {
+            await prisma.startupUpdateRead.create({
+                data: { updateId: u.id, investorId: investor.id, seenAt: new Date() }
+            });
+        }
+    }
+
+    const latestHNUpdate = await prisma.monthlyUpdate.findFirst({
+        where: { startupId: healthNode.id },
+        orderBy: { month: 'desc' }
+    });
+    if (latestHNUpdate) {
+        await prisma.monthlyUpdate.update({
+            where: { id: latestHNUpdate.id },
+            data: {
+                source: 'COMPANY_SUBMITTED',
+                status: 'SUBMITTED',
+                submittedBy: healthNodeFounder.id,
+            }
+        });
+    }
+
+    // 10. Seed Messaging Conversations and Messages
+    const finlyConv = await prisma.startupConversation.create({
+        data: { startupId: finly.id }
+    });
+
+    await prisma.startupMessage.create({
+        data: {
+            conversationId: finlyConv.id,
+            senderUserId: investorId,
+            body: 'Hi Ravi, great traction this month! Let me know if you need help with the Series B prep.',
+            createdAt: new Date(Date.now() - 86400000 * 2),
+        }
+    });
+
+    const finlyReply = await prisma.startupMessage.create({
+        data: {
+            conversationId: finlyConv.id,
+            senderUserId: finlyFounder.id,
+            body: 'Thanks Arjun! We are actually finalizing the deck this week. Will share it over this channel soon.',
+            createdAt: new Date(Date.now() - 86400000 * 1),
+        }
+    });
+
+    // Mark the investor's message as read by the founder
+    await prisma.startupMessageRead.create({
+        data: { messageId: finlyReply.id, userId: investorId, seenAt: new Date() }
+    });
+
+    const hnConv = await prisma.startupConversation.create({
+        data: { startupId: healthNode.id }
+    });
+
+    await prisma.startupMessage.create({
+        data: {
+            conversationId: hnConv.id,
+            senderUserId: healthNodeFounder.id,
+            body: 'Hey team, just submitted the latest metrics. We hit a snag with the hospital pilot due to compliance reviews.',
+            createdAt: new Date(Date.now() - 3600000 * 4),
+        }
+    });
+    console.log('✅ Created sample messaging conversations for Finly and HealthNode');
+
+    // 11. Default documents loop
     const docTypes = ['sha', 'term_sheet', 'cap_table', 'financial_statement'] as const;
     for (let i = 0; i < startups.length; i++) {
         const startup = startups[i];
@@ -299,23 +453,38 @@ async function seed() {
                     fileSizeBytes: Math.round(Math.random() * 500000 + 50000),
                     mimeType: 'application/pdf',
                     documentType: docTypes[j % docTypes.length],
-                    description: `${docTypes[j % docTypes.length].replace('_', ' ')} for ${startup.name}`,
                     uploadedBy: investorId,
                 }
             });
         }
-        console.log(`✅ Created ${numDocs} document(s) for ${startup.name}`);
+        await prisma.document.create({
+            data: {
+                startupId: null, // General doc
+                investorId,
+                fileName: `Tax_Return_2023_${startup.name}.pdf`,
+                fileKey: `general/tax_${Date.now()}_${startup.id}.pdf`,
+                fileSizeBytes: Math.round(Math.random() * 300000 + 50000),
+                mimeType: 'application/pdf',
+                documentType: 'tax_document',
+                uploadedBy: investorId,
+            }
+        });
     }
+    console.log('✅ Created sample documents');
 
-    console.log('\n🎉 Seed completed successfully!');
-    console.log('📧 Login: investor@portfolioos.com');
-    console.log('🔑 Password: Demo@2024\n');
-
-    await prisma.$disconnect();
-    process.exit(0);
+    console.log('\n======================================================');
+    console.log('🎉 Database seeding completed successfully!');
+    console.log('Investor Login: investor@portfolioos.com / Demo@2024');
+    console.log('Company Login 1 (Finly): ravi@finly.in / Company@2024');
+    console.log('Company Login 2 (HealthNode): priya@healthnode.io / Company@2024');
+    console.log('======================================================\n');
 }
 
-seed().catch((err) => {
-    console.error('Seed failed:', err);
-    process.exit(1);
-});
+seed()
+    .catch((e) => {
+        console.error('Error seeding database:', e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

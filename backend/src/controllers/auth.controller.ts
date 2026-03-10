@@ -45,6 +45,80 @@ export async function register(req: Request, res: Response, next: NextFunction):
     }
 }
 
+export async function registerCompanyLocal(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { name, email, password } = req.body;
+        if (!name || !email || !password) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: 'name, email, and password are required' }
+            });
+            return;
+        }
+
+        const result = await authService.registerCompanyUserLocal(name, email, password);
+
+        res.cookie('refreshToken', result.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        res.status(201).json({
+            success: true,
+            data: {
+                accessToken: result.accessToken,
+                investor: result.investor,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function registerCompanyUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { name, email, password, inviteToken } = req.body;
+        if (!name || !email || !password || !inviteToken) {
+            res.status(400).json({
+                success: false,
+                error: { code: 'VALIDATION_ERROR', message: 'name, email, password, and inviteToken are required' }
+            });
+            return;
+        }
+
+        const result = await authService.registerCompanyUser(name, email, password, inviteToken);
+
+        res.cookie('refreshToken', result.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        res.status(201).json({
+            success: true,
+            data: {
+                accessToken: result.accessToken,
+                investor: result.investor,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function getInvite(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { token } = req.params;
+        const result = await authService.getInviteByToken(token);
+        res.json({ success: true, data: result });
+    } catch (error) {
+        next(error);
+    }
+}
+
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
         const parsed = loginSchema.safeParse(req.body);

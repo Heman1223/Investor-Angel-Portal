@@ -15,12 +15,29 @@ export async function getUpdates(investorId: string, startupId: string) {
 
     const updates = await prisma.monthlyUpdate.findMany({
         where: { startupId },
-        orderBy: { month: 'desc' }
+        orderBy: { month: 'desc' },
+        include: {
+            reads: {
+                where: { investorId },
+                select: { seenAt: true }
+            },
+            revisions: {
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+            }
+        }
     });
-    return updates.map(u => ({
-        ...u,
-        createdAt: u.createdAt.toISOString()
-    }));
+
+    return updates.map(u => {
+        const { reads, revisions, ...rest } = u;
+        return {
+            ...rest,
+            createdAt: u.createdAt.toISOString(),
+            isRead: reads.length > 0,
+            seenAt: reads[0]?.seenAt?.toISOString() || null,
+            latestRevision: revisions[0] || null,
+        };
+    });
 }
 
 export async function getAllUpdates(investorId: string) {
@@ -29,17 +46,22 @@ export async function getAllUpdates(investorId: string) {
         include: {
             startup: {
                 select: { id: true, name: true, sector: true }
+            },
+            reads: {
+                where: { investorId },
+                select: { seenAt: true }
             }
         },
         orderBy: { month: 'desc' }
     });
 
     return updates.map(u => {
-        const { startup, ...rest } = u;
+        const { startup, reads, ...rest } = u;
         return {
             ...rest,
             createdAt: u.createdAt.toISOString(),
-            // Replicate Mongoose `.populate('startupId')` behavior
+            isRead: reads.length > 0,
+            seenAt: reads[0]?.seenAt?.toISOString() || null,
             startupId: startup ? {
                 id: startup.id,
                 name: startup.name,
@@ -72,12 +94,9 @@ export async function createUpdate(
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
     }
 
-    // Convert to paise
     const revenuePaise = Math.round(data.revenue * 100);
     const burnRatePaise = Math.round(data.burnRate * 100);
     const cashBalancePaise = Math.round(data.cashBalance * 100);
-
-    // Compute runway
     const runwayMonths = calculateRunway(cashBalancePaise, burnRatePaise);
 
     try {
@@ -96,10 +115,11 @@ export async function createUpdate(
                 keyWins: data.keyWins,
                 keyChallenges: data.keyChallenges,
                 helpNeeded: data.helpNeeded,
+                source: 'INVESTOR_ENTERED',
+                status: 'SUBMITTED',
             }
         });
 
-        // Update startup valuation if provided
         if (data.valuationUpdate) {
             await prisma.startup.update({
                 where: { id: startup.id },
@@ -108,7 +128,6 @@ export async function createUpdate(
             invalidateAnalyticsCache();
         }
 
-        // Run alert engine
         await runAlertEngine(investorId, startupId);
 
         await writeAuditLog({
@@ -121,10 +140,73 @@ export async function createUpdate(
 
         return update;
     } catch (error: any) {
-        // Prisma unique constraint violation code is P2002
         if (error.code === 'P2002') {
             throw createAppError('An update for this month already exists', 409, 'DUPLICATE');
         }
         throw error;
     }
 }
+
+/**
+ * Mark an update as seen by the investor.
+ */
+export async function markUpdateSeen(investorId: string, updateId: string) {
+    const update = await prisma.monthlyUpdate.findUnique({ where: { id: updateId } });
+    if (!update) {
+        throw createAppError('Update not found', 404, 'NOT_FOUND');
+    }
+
+    // Verify investor has access to the startup
+    const startup = await prisma.startup.findFirst({
+        where: { id: update.startupId, investorId }
+    });
+    const investment = await prisma.investment.findUnique({
+        where: { investorId_startupId: { investorId, startupId: update.startupId } }
+    });
+    if (!startup && !investment) {
+        throw createAppError('You do not have access to this update', 403, 'FORBIDDEN');
+    }
+
+    await prisma.startupUpdateRead.upsert({
+        where: { updateId_investorId: { updateId, investorId } },
+        create: { updateId, investorId },
+        update: { seenAt: new Date() },
+    });
+
+    return { marked: true };
+}
+
+/**
+ * Get unread update count for the investor.
+ */
+export async function getUnreadUpdateCount(investorId: string) {
+    // Get all startup IDs the investor has access to
+    const investments = await prisma.investment.findMany({
+        where: { investorId },
+        select: { startupId: true }
+    });
+    const ownedStartups = await prisma.startup.findMany({
+        where: { investorId },
+        select: { id: true }
+    });
+    const startupIds = new Set([
+        ...investments.map(i => i.startupId),
+        ...ownedStartups.map(s => s.id)
+    ]);
+
+    if (startupIds.size === 0) return { count: 0 };
+
+    // Count updates that have NO read record for this investor
+    const count = await prisma.monthlyUpdate.count({
+        where: {
+            startupId: { in: Array.from(startupIds) },
+            status: 'SUBMITTED',
+            reads: {
+                none: { investorId }
+            }
+        }
+    });
+
+    return { count };
+}
+

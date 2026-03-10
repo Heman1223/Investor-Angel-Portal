@@ -8,18 +8,53 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  INVESTOR
+  COMPANY_USER
+}
+
+enum NotificationPreference {
+  IMMEDIATE
+  DIGEST
+  MUTED
+}
+
+enum UpdateSource {
+  INVESTOR_ENTERED
+  COMPANY_SUBMITTED
+}
+
+enum UpdateStatus {
+  DRAFT
+  SUBMITTED
+  PUBLISHED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+// ─── Core Models ──────────────────────────────────────────────────────────────
+
 model Investor {
   id                   String              @id @default(cuid())
   name                 String
   email                String              @unique
   passwordHash         String
-  role                 String              @default("investor")
-  subscriptionTier     String              @default("solo")
+  role                 UserRole            @default(INVESTOR)
+  notificationPreference NotificationPreference @default(IMMEDIATE)
+  subscriptionTier     String              @default("free") // "free", "pro", "enterprise"
   twoFactorSecret      String?
   twoFactorEnabled     Boolean             @default(false)
   lastLoginAt          DateTime?
   passwordResetToken   String?
   passwordResetExpires DateTime?
+  tokenVersion         Int                 @default(0)
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
   alerts               Alert[]
@@ -30,15 +65,22 @@ model Investor {
   documents            Document[]
   monthlyUpdates       MonthlyUpdate[]
   startups             Startup[]
+  investments          Investment[]
+  companyMemberships   CompanyMembership[]
+  invitesSent          CompanyInvite[]     @relation("InvitesSent")
+  updateReads          StartupUpdateRead[]
+  updateRevisions      StartupUpdateRevision[]
+  sentMessages         StartupMessage[]
+  messageReads         StartupMessageRead[]
 }
 
 model Startup {
-  id                   String          @id @default(cuid())
+  id                   String              @id @default(cuid())
   investorId           String
   name                 String
   sector               String
   stage                String
-  status               String          @default("active")
+  status               String              @default("active")
   entryValuation       Float
   currentValuation     Float
   equityPercent        Float
@@ -50,18 +92,71 @@ model Startup {
   founderEmail         String?
   notes                Json?
   coInvestors          String?
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
+  updateDueDay         Int                 @default(10)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
   alerts               Alert[]
   cashflows            Cashflow[]
   dilutionEvents       DilutionEvent[]
   documents            Document[]
   monthlyUpdates       MonthlyUpdate[]
-  investor             Investor        @relation(fields: [investorId], references: [id])
+  investor             Investor            @relation(fields: [investorId], references: [id])
+  investments          Investment[]
+  companyMemberships   CompanyMembership[]
+  companyInvites       CompanyInvite[]
+  conversation         StartupConversation?
 }
 
+// ─── Multi-Investor & Company Access ──────────────────────────────────────────
+
+model Investment {
+  id         String   @id @default(cuid())
+  investorId String
+  startupId  String
+  amount     Float
+  date       DateTime
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  investor   Investor @relation(fields: [investorId], references: [id])
+  startup    Startup  @relation(fields: [startupId], references: [id])
+
+  @@unique([investorId, startupId])
+}
+
+model CompanyMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  startupId String
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+  user      Investor @relation(fields: [userId], references: [id])
+  startup   Startup  @relation(fields: [startupId], references: [id])
+
+  @@unique([userId, startupId])
+}
+
+model CompanyInvite {
+  id          String       @id @default(cuid())
+  startupId   String
+  invitedBy   String
+  email       String
+  token       String       @unique
+  status      InviteStatus @default(PENDING)
+  companyRole String       @default("member")
+  invitedAt   DateTime     @default(now())
+  resentAt    DateTime?
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  expiresAt   DateTime
+  startup     Startup      @relation(fields: [startupId], references: [id])
+  inviter     Investor     @relation("InvitesSent", fields: [invitedBy], references: [id])
+}
+
+// ─── Monthly Updates ──────────────────────────────────────────────────────────
+
 model MonthlyUpdate {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   startupId       String
   submittedBy     String
   month           String
@@ -75,12 +170,91 @@ model MonthlyUpdate {
   keyWins         String?
   keyChallenges   String?
   helpNeeded      String?
-  createdAt       DateTime @default(now())
-  startup         Startup  @relation(fields: [startupId], references: [id])
-  investor        Investor @relation(fields: [submittedBy], references: [id])
+  source          UpdateSource @default(INVESTOR_ENTERED)
+  status          UpdateStatus @default(SUBMITTED)
+  createdAt       DateTime     @default(now())
+  startup         Startup      @relation(fields: [startupId], references: [id])
+  investor        Investor     @relation(fields: [submittedBy], references: [id])
+  reads           StartupUpdateRead[]
+  revisions       StartupUpdateRevision[]
 
   @@unique([startupId, month])
 }
+
+model StartupUpdateRead {
+  id         String        @id @default(cuid())
+  updateId   String
+  investorId String
+  seenAt     DateTime      @default(now())
+  update     MonthlyUpdate @relation(fields: [updateId], references: [id])
+  investor   Investor      @relation(fields: [investorId], references: [id])
+
+  @@unique([updateId, investorId])
+}
+
+model StartupUpdateRevision {
+  id               String        @id @default(cuid())
+  originalUpdateId String
+  correctionNote   String
+  changedFields    Json
+  revenue          Float?
+  burnRate         Float?
+  cashBalance      Float?
+  runwayMonths     Float?
+  notes            String?
+  submittedBy      String
+  createdAt        DateTime      @default(now())
+  originalUpdate   MonthlyUpdate @relation(fields: [originalUpdateId], references: [id])
+  submitter        Investor      @relation(fields: [submittedBy], references: [id])
+}
+
+// ─── Messaging ────────────────────────────────────────────────────────────────
+
+model StartupConversation {
+  id            String           @id @default(cuid())
+  startupId     String           @unique
+  createdAt     DateTime         @default(now())
+  lastMessageAt DateTime         @default(now())
+  startup       Startup          @relation(fields: [startupId], references: [id])
+  messages      StartupMessage[]
+}
+
+model StartupMessage {
+  id             String                     @id @default(cuid())
+  conversationId String
+  senderUserId   String
+  body           String
+  messageType    String                     @default("TEXT")
+  createdAt      DateTime                   @default(now())
+  conversation   StartupConversation        @relation(fields: [conversationId], references: [id])
+  sender         Investor                   @relation(fields: [senderUserId], references: [id])
+  attachments    StartupMessageAttachment[]
+  reads          StartupMessageRead[]
+}
+
+model StartupMessageAttachment {
+  id         String         @id @default(cuid())
+  messageId  String
+  fileName   String
+  mimeType   String
+  fileSize   Int
+  storageKey String
+  uploadedAt DateTime       @default(now())
+  message    StartupMessage @relation(fields: [messageId], references: [id])
+}
+
+model StartupMessageRead {
+  id        String         @id @default(cuid())
+  messageId String
+  userId    String
+  seenAt    DateTime       @default(now())
+  message   StartupMessage @relation(fields: [messageId], references: [id])
+  user      Investor       @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+}
+
+// ─── Financial & Analytics ────────────────────────────────────────────────────
 
 model Cashflow {
   id              String   @id @default(cuid())
@@ -133,6 +307,8 @@ model Document {
   investor      Investor @relation(fields: [investorId], references: [id])
   startup       Startup? @relation(fields: [startupId], references: [id])
 }
+
+// ─── Alerts & Config ──────────────────────────────────────────────────────────
 
 model Alert {
   id          String    @id @default(cuid())

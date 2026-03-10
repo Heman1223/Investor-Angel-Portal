@@ -4,6 +4,8 @@ export type AlertType = 'CASH_ZERO' | 'RUNWAY_CRITICAL' | 'RUNWAY_WARNING' | 'RE
 export type AlertSeverity = 'RED' | 'YELLOW' | 'GREEN';
 import { calculateRunway, calculateRevenueChangeMoM, calculateXIRR, calculateMOIC, calculateCurrentValue } from './financials.service';
 import { logger } from '../utils/logger';
+import { getIO } from '../socket';
+import { sendReminderEmail } from './notification.service';
 
 async function getOrCreateConfig(investorId: string) {
     let config = await prisma.alertConfiguration.findUnique({ where: { investorId } });
@@ -16,33 +18,44 @@ async function getOrCreateConfig(investorId: string) {
 async function createAlertIfNew(params: {
     investorId: string;
     startupId: string;
-    alertType: AlertType;
-    severity: AlertSeverity;
+    alertType: string;
+    severity: string;
     message: string;
-}) {
-    // Deduplication: don't create duplicate unread alerts
-    const existing = await prisma.alert.findFirst({
-        where: {
-            startupId: params.startupId,
-            alertType: params.alertType,
-            isRead: false,
-        }
-    });
-    if (existing) return;
+    details?: any;
+}): Promise<boolean> {
+    try {
+        // Deduplication: don't create duplicate unread alerts
+        const existing = await prisma.alert.findFirst({
+            where: {
+                startupId: params.startupId,
+                alertType: params.alertType,
+                isRead: false,
+            }
+        });
+        if (existing) return false;
 
-    await prisma.alert.create({
-        data: {
-            investorId: params.investorId,
-            startupId: params.startupId,
-            alertType: params.alertType,
-            severity: params.severity,
-            message: params.message,
-            isRead: false,
-            triggeredAt: new Date(),
-        }
-    });
+        const alert = await prisma.alert.create({
+            data: {
+                investorId: params.investorId,
+                startupId: params.startupId,
+                alertType: params.alertType,
+                severity: params.severity,
+                message: params.message,
+                isRead: false,
+                triggeredAt: new Date(),
+            }
+        });
 
-    logger.info(`Alert created: ${params.alertType} for startup ${params.startupId}`);
+        logger.info(`Alert created: ${params.alertType} for startup ${params.startupId}`);
+
+        // Notify frontend
+        getIO().to(`user_${params.investorId}`).emit('new_alert', alert);
+
+        return true;
+    } catch (error) {
+        logger.error('Failed to create alert', error);
+        return false;
+    }
 }
 
 export async function runAlertEngine(investorId: string, startupId: string): Promise<void> {
@@ -163,13 +176,27 @@ export async function checkOverdueUpdates(investorId: string): Promise<void> {
         }
 
         if (daysSince > config.updateOverdueDays) {
-            await createAlertIfNew({
+            const isNew = await createAlertIfNew({
                 investorId: investorId,
                 startupId: startup.id,
                 alertType: 'UPDATE_OVERDUE',
                 severity: 'YELLOW',
                 message: `${startup.name}: No founder update received in ${daysSince} days`,
             });
+
+            if (isNew) {
+                const members = await prisma.companyMembership.findMany({
+                    where: { startupId: startup.id },
+                    include: { user: true }
+                });
+
+                for (const member of members) {
+                    const user = member.user as any;
+                    if (user.notificationPreference === 'IMMEDIATE') {
+                        await sendReminderEmail(user.email, startup.name).catch(() => { });
+                    }
+                }
+            }
         }
     }
 }

@@ -3,9 +3,27 @@ import { AuthRequest } from '../middleware/auth';
 import * as documentsService from '../services/documents.service';
 import multer from 'multer';
 
+const ALLOWED_MIME_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/csv'
+];
+
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB
+    fileFilter: (req, file, cb) => {
+        if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only PDF, Word, Excel, CSV, and Images are allowed.'));
+        }
+    }
 });
 
 export const uploadMiddleware = upload.single('file');

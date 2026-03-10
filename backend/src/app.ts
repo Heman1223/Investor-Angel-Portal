@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import morgan from 'morgan';
+import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { responseMapper } from './middleware/responseMapper';
 import authRoutes from './routes/auth.routes';
@@ -14,6 +16,10 @@ import documentRoutes from './routes/document.routes';
 import settingsRoutes from './routes/settings.routes';
 import reportRoutes from './routes/report.routes';
 import exportRoutes from './routes/export.routes';
+import companyRoutes from './routes/company.routes';
+import companyInviteRoutes from './routes/companyInvite.routes';
+import messagingRoutes from './routes/messaging.routes';
+import metricsRoutes from './routes/metrics.routes';
 
 dotenv.config();
 
@@ -21,6 +27,17 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
+
+// Enforce HTTPS in production
+app.use((req, res, next) => {
+    if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+        return res.redirect(`https://${req.hostname}${req.url}`);
+    }
+    next();
+});
+
+// Request logging
+app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
 
 const allowedOrigins = [
     process.env.FRONTEND_URL,
@@ -33,7 +50,7 @@ app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-        
+
         if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
             callback(null, true);
         } else {
@@ -51,6 +68,12 @@ app.use(cookieParser());
 app.use(responseMapper);
 
 // API Routes
+// New: Company Portal routes
+app.use('/api/company', companyRoutes);
+app.use('/api/company', companyInviteRoutes);
+app.use('/api/messaging', messagingRoutes);
+
+// Standard routes
 app.use('/api/auth', authRoutes);
 app.use('/api/startups', startupRoutes);
 app.use('/api/dashboard', dashboardRoutes);
@@ -60,6 +83,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/metrics', metricsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

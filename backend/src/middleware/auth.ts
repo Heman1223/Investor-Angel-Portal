@@ -7,6 +7,7 @@ export interface AuthRequest extends Request {
         id: string;
         email: string;
         role: string;
+        tokenVersion: number;
     };
 }
 
@@ -22,13 +23,14 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
         }
 
         const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; email: string; role: string };
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; email: string; role: string; tokenVersion?: number };
 
-        // Verify investor still exists
+        // Verify investor still exists and check tokenVersion
         const investor = await prisma.investor.findUnique({
             where: { id: decoded.id },
-            select: { id: true, email: true, role: true }
+            select: { id: true, email: true, role: true, tokenVersion: true }
         });
+
         if (!investor) {
             res.status(401).json({
                 success: false,
@@ -37,10 +39,19 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
             return;
         }
 
+        if (decoded.tokenVersion !== undefined && investor.tokenVersion !== decoded.tokenVersion) {
+            res.status(401).json({
+                success: false,
+                error: { code: 'UNAUTHORIZED', message: 'Session expired' }
+            });
+            return;
+        }
+
         req.investor = {
             id: decoded.id,
             email: decoded.email,
             role: decoded.role,
+            tokenVersion: investor.tokenVersion,
         };
 
         next();

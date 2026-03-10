@@ -34,7 +34,10 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        const isAuthRequest = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register');
+        const isAuthRequest = originalRequest.url?.includes('/auth/login') ||
+            originalRequest.url?.includes('/auth/register') ||
+            originalRequest.url?.includes('/auth/refresh') ||
+            originalRequest.url?.includes('/auth/me');
 
         if (error.response?.status === 401 && !originalRequest._retry && !(originalRequest as any)._isRefresh && !isAuthRequest) {
             if (isRefreshing) {
@@ -81,6 +84,11 @@ export const authAPI = {
         api.post('/auth/login', { email, password }),
     register: (name: string, email: string, password: string) =>
         api.post('/auth/register', { name, email, password }),
+    registerCompanyLocal: (name: string, email: string, password: string) =>
+        api.post('/auth/register/company-local', { name, email, password }),
+    registerCompany: (name: string, email: string, password: string, inviteToken: string) =>
+        api.post('/auth/register/company', { name, email, password, inviteToken }),
+    getInvite: (token: string) => api.get(`/auth/invite/${token}`),
     logout: () => api.post('/auth/logout'),
     refresh: () => api.post('/auth/refresh'),
     me: () => api.get('/auth/me'),
@@ -120,6 +128,9 @@ export const updatesAPI = {
     create: (startupId: string, data: any) =>
         api.post(`/startups/${startupId}/updates`, data),
     getAll: () => api.get('/settings/updates'),
+    markSeen: (startupId: string, updateId: string) =>
+        api.post(`/startups/${startupId}/updates/${updateId}/mark-seen`),
+    getUnreadCount: () => api.get('/investor/updates/unread-count'),
 };
 
 // Cashflows
@@ -182,4 +193,35 @@ export const exportAPI = {
     portfolioCSV: () => api.get('/export/portfolio.csv', { responseType: 'blob' }),
     cashflowsCSV: (startupId?: string) =>
         api.get('/export/cashflows.csv', { params: startupId ? { startupId } : {}, responseType: 'blob' }),
+};
+
+export const companyAPI = {
+    getDashboard: () => api.get('/company/me/startups'),
+    getPendingInvites: () => api.get('/company/invites'),
+    acceptInvite: (inviteId: string) => api.post(`/company/invites/${inviteId}/accept`),
+    declineInvite: (inviteId: string) => api.post(`/company/invites/${inviteId}/decline`),
+    getUpdates: () => api.get('/company/updates'),
+    createUpdate: (data: any) => api.post('/company/updates', data),
+    submitCorrection: (id: string, data: any) => api.put(`/company/updates/${id}/correction`, data),
+};
+
+// Invites
+export const inviteAPI = {
+    create: (startupId: string, email: string) => api.post(`/startups/${startupId}/company-invites`, { email }),
+    getAll: (startupId: string) => api.get(`/startups/${startupId}/company-invites`),
+    getMembers: (startupId: string) => api.get(`/startups/${startupId}/company-members`),
+    resend: (startupId: string, inviteId: string) => api.post(`/startups/${startupId}/company-invites/${inviteId}/resend`),
+    revoke: (startupId: string, inviteId: string) => api.post(`/startups/${startupId}/company-invites/${inviteId}/revoke`),
+};
+
+// Messaging
+export const messagingAPI = {
+    getConversations: (startupId: string) => api.get(`/messaging/${startupId}`),
+    getMessages: (conversationId: string) => api.get(`/messaging/conversations/${conversationId}/messages`),
+    sendMessage: (conversationId: string, content: string) => api.post(`/messaging/conversations/${conversationId}/messages`, { content }),
+    markRead: (conversationId: string) => api.post(`/messaging/conversations/${conversationId}/read`),
+    getUnreadCount: (startupId?: string) =>
+        api.get(startupId ? `/startups/${startupId}/messages/unread-count` : `/messages/unread-count`),
+    markSeenByStartup: (startupId: string) => api.post(`/startups/${startupId}/messages/mark-seen`),
+    getConversationByStartup: (startupId: string) => api.get(`/startups/${startupId}/messages`), // Same as getConversations
 };

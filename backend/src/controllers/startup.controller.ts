@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import * as startupService from '../services/startup.service';
 import { createStartupSchema, updateStartupSchema, exitStartupSchema, followOnSchema, updateValuationSchema } from '../validators/startup.validators';
 import { ZodError } from 'zod';
+import { logAudit } from '../utils/auditLogger';
 
 function formatZodError(error: ZodError) {
     const fields: Record<string, string> = {};
@@ -20,6 +21,10 @@ export async function createStartup(req: AuthRequest, res: Response, next: NextF
             return;
         }
         const startup = await startupService.createStartup(req.investor!.id, parsed.data);
+
+        // Audit log
+        await logAudit(req.investor!.id, 'CREATE', 'Startup', startup.id, null, parsed.data, { ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+
         res.status(201).json({ success: true, data: startup });
     } catch (error) { next(error); }
 }
@@ -47,6 +52,10 @@ export async function updateStartup(req: AuthRequest, res: Response, next: NextF
             return;
         }
         const startup = await startupService.updateStartup(req.investor!.id, req.params.id, parsed.data, req);
+
+        // Audit log
+        await logAudit(req.investor!.id, 'UPDATE', 'Startup', req.params.id, null, parsed.data, { ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+
         res.json({ success: true, data: startup });
     } catch (error) { next(error); }
 }
@@ -54,6 +63,10 @@ export async function updateStartup(req: AuthRequest, res: Response, next: NextF
 export async function deleteStartup(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
         const startup = await startupService.softDeleteStartup(req.investor!.id, req.params.id);
+
+        // Audit log
+        await logAudit(req.investor!.id, 'DELETE', 'Startup', req.params.id, null, null, { ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+
         res.json({ success: true, data: startup });
     } catch (error) { next(error); }
 }

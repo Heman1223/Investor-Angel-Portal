@@ -11,7 +11,7 @@ import {
     CheckCircle2, Rocket, ChevronRight, Award, AlertOctagon,
     FileText, Clock
 } from 'lucide-react';
-import { dashboardAPI, alertsAPI } from '../services/api';
+import { dashboardAPI, alertsAPI, updatesAPI, messagingAPI } from '../services/api';
 import { formatCurrencyCompact, formatMOIC, formatPercent, formatDate, formatTVPI, paiseToRupees } from '../utils/formatters';
 
 // ── Animated Number Component ──────────────────────────────
@@ -81,6 +81,22 @@ export default function DashboardPage() {
         },
     });
 
+    const { data: unreadUpdates } = useQuery({
+        queryKey: ['unreadUpdates'],
+        queryFn: async () => {
+            const res = await updatesAPI.getUnreadCount();
+            return res.data.data?.count || 0;
+        },
+    });
+
+    const { data: unreadMessages } = useQuery({
+        queryKey: ['unreadMessages'],
+        queryFn: async () => {
+            const res = await messagingAPI.getUnreadCount();
+            return res.data?.unreadCount || 0;
+        },
+    });
+
     const redAlerts = alerts?.filter((a: { severity: string; isRead: boolean }) => a.severity === 'RED' && !a.isRead) || [];
     const yellowAlerts = alerts?.filter((a: { severity: string; isRead: boolean }) => a.severity === 'YELLOW' && !a.isRead) || [];
     const allUnreadAlerts = [...redAlerts, ...yellowAlerts].slice(0, 3);
@@ -142,7 +158,8 @@ export default function DashboardPage() {
         { label: 'MOIC', rawValue: d.portfolioMOIC, formatter: formatMOIC, icon: Target, accent: '#A78BFA', bg: 'rgba(167,139,250,0.1)', change: d.portfolioMOIC >= 1 ? `${formatMOIC(d.portfolioMOIC)}` : '—', up: d.portfolioMOIC >= 1 },
         { label: 'TVPI', rawValue: d.portfolioTVPI || 0, formatter: formatTVPI, icon: Target, accent: '#FB923C', bg: 'rgba(251,146,60,0.1)', change: (d.portfolioTVPI || 0) >= 1 ? `${formatTVPI(d.portfolioTVPI)}` : '—', up: (d.portfolioTVPI || 0) >= 1 },
         { label: 'Active Startups', rawValue: d.activeCount, formatter: (v: number) => String(Math.round(v)), icon: Rocket, accent: '#4ADE80', bg: 'rgba(74,222,128,0.1)', change: null, up: true },
-        { label: 'Exits', rawValue: d.exitedCount, formatter: (v: number) => String(Math.round(v)), icon: CheckCircle2, accent: '#60A5FA', bg: 'rgba(96,165,250,0.1)', change: null, up: true },
+        { label: 'Unread Updates', rawValue: unreadUpdates || 0, formatter: (v: number) => String(Math.round(v)), icon: FileText, accent: '#60A5FA', bg: 'rgba(96,165,250,0.1)', change: (unreadUpdates || 0) > 0 ? 'Action Needed' : null, up: false },
+        { label: 'New Messages', rawValue: unreadMessages || 0, formatter: (v: number) => String(Math.round(v)), icon: CheckCircle2, accent: '#d4a843', bg: 'rgba(212,168,67,0.1)', change: (unreadMessages || 0) > 0 ? 'Action Needed' : null, up: false },
     ];
 
     const sectorData = d.sectorAllocation.map((s: { sector: string; invested: number }) => ({

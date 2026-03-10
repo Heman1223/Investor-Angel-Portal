@@ -480,6 +480,7 @@ function SignupCard({ onBack, onSuccess }: { onBack: () => void; onSuccess: (acc
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
+  const [role, setRole] = useState<'INVESTOR' | 'COMPANY'>('INVESTOR');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -489,7 +490,12 @@ function SignupCard({ onBack, onSuccess }: { onBack: () => void; onSuccess: (acc
     if (password !== confirmPw) { toast.error('Passwords do not match'); return; }
     setLoading(true);
     try {
-      const res = await authAPI.register(name, email, password);
+      let res;
+      if (role === 'COMPANY') {
+        res = await authAPI.registerCompanyLocal(name, email, password);
+      } else {
+        res = await authAPI.register(name, email, password);
+      }
       toast.success('Account created! Welcome aboard.');
       onSuccess(res.data.data.accessToken, res.data.data.investor);
     } catch (err: any) {
@@ -514,7 +520,42 @@ function SignupCard({ onBack, onSuccess }: { onBack: () => void; onSuccess: (acc
 
       <div className="mc-form-head">
         <h2 className="mc-form-title">Create your<br /><span className="mc-form-title-gold">account.</span></h2>
-        <p className="mc-form-sub">Get started with your portfolio dashboard.</p>
+        <p className="mc-form-sub">Get started with your Angel Portal dashboard.</p>
+      </div>
+
+      <div className="mc-role-toggle" style={{ position: 'relative', display: 'flex', background: 'rgba(15,24,41,0.6)', padding: '5px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: '32px' }}>
+        {/* Animated pill background */}
+        <div style={{
+          position: 'absolute', top: '5px', bottom: '5px',
+          left: role === 'INVESTOR' ? '5px' : '50%',
+          right: role === 'COMPANY' ? '5px' : '50%',
+          background: 'linear-gradient(135deg, #e8c468, #c5a454)',
+          borderRadius: '8px', boxShadow: '0 2px 8px rgba(197,164,84,0.25)',
+          transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)', zIndex: 0
+        }} />
+
+        <button
+          type="button"
+          onClick={() => setRole('INVESTOR')}
+          style={{
+            flex: 1, position: 'relative', zIndex: 1, padding: '12px', fontSize: '13.5px', fontWeight: 600,
+            color: role === 'INVESTOR' ? '#060d19' : '#8b9ab0',
+            border: 'none', background: 'transparent', cursor: 'pointer', transition: 'color 0.3s'
+          }}
+        >
+          Investor
+        </button>
+        <button
+          type="button"
+          onClick={() => setRole('COMPANY')}
+          style={{
+            flex: 1, position: 'relative', zIndex: 1, padding: '12px', fontSize: '13.5px', fontWeight: 600,
+            color: role === 'COMPANY' ? '#060d19' : '#8b9ab0',
+            border: 'none', background: 'transparent', cursor: 'pointer', transition: 'color 0.3s'
+          }}
+        >
+          Founder / Company
+        </button>
       </div>
 
       <form onSubmit={handleSignup} className="mc-form">
@@ -685,8 +726,8 @@ export default function LoginPage() {
               <span className="mc-headline-gold">Total clarity.</span>
             </h1>
             <p className="mc-desc">
-              Track valuations, monitor runway, and measure returns
-              across your entire portfolio in real time.
+              Investors: Track valuations and measure returns across your portfolio.<br />
+              Founders: Submit operating updates seamlessly.
             </p>
           </div>
 
@@ -763,7 +804,7 @@ export default function LoginPage() {
                 {/* Headline */}
                 <div className="mc-form-head">
                   <h2 className="mc-form-title">
-                    {step === 'email' ? <>Sign in to your<br /><span className="mc-form-title-gold">portfolio.</span></> : <>Verify your<br /><span className="mc-form-title-gold">identity.</span></>}
+                    {step === 'email' ? <>Sign in to your<br /><span className="mc-form-title-gold">account.</span></> : <>Verify your<br /><span className="mc-form-title-gold">identity.</span></>}
                   </h2>
                   <p className="mc-form-sub">
                     {step === 'email'
