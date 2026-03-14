@@ -199,9 +199,13 @@ export const companyAPI = {
     getDashboard: () => api.get('/company/me/startups'),
     getPendingInvites: () => api.get('/company/invites'),
     acceptInvite: (inviteId: string) => api.post(`/company/invites/${inviteId}/accept`),
+    acceptInviteByToken: (token: string) => api.post(`/company/invites/accept-token/${token}`),
     declineInvite: (inviteId: string) => api.post(`/company/invites/${inviteId}/decline`),
+    updateStartupProfile: (id: string, data: any) => api.put(`/company/startups/${id}`, data),
     getUpdates: () => api.get('/company/updates'),
     createUpdate: (data: any) => api.post('/company/updates', data),
+    updateUpdate: (updateId: string, data: any) => api.put(`/company/updates/${updateId}`, data),
+    submitUpdate: (updateId: string, investorIds?: string[]) => api.post(`/company/updates/${updateId}/submit`, { investorIds }),
     submitCorrection: (id: string, data: any) => api.put(`/company/updates/${id}/correction`, data),
 };
 

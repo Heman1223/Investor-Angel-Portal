@@ -9,7 +9,7 @@ import {
     Plus, DoorOpen, TrendingUp, X, AlertTriangle,
     Share2, Edit3, Calendar, ChevronRight, Download,
     Users, StickyNote, Send, ChevronDown, Trash2,
-    ArrowUpRight, BarChart2, FileText,
+    ArrowUpRight, ArrowDownRight, BarChart2, FileText,
     GitBranch, Activity, Mail, MessageSquare, ShieldCheck
 } from 'lucide-react';
 import { startupsAPI, updatesAPI, documentsAPI, cashflowsAPI, inviteAPI, messagingAPI } from '../services/api';
@@ -259,12 +259,12 @@ export default function StartupDetailPage() {
                 <div className="sd-tab-body">
                     {tab === 'overview' && <OverviewTab startup={s} updates={updates} documents={documents} handleDownload={handleDownload} />}
                     {tab === 'cashflows' && <CashflowsTab startup={s} />}
-                    {tab === 'updates' && <UpdatesTab updates={updates} onAddUpdate={() => setShowUpdate(true)} isActive={s.status === 'active'} startupId={s.id} />}
-                    {tab === 'messaging' && <MessagingTab startupId={s.id} />}
+                    {tab === 'updates' && <UpdatesTab updates={updates} onAddUpdate={() => setShowUpdate(true)} isActive={s.status === 'active'} startupId={id!} />}
+                    {tab === 'messaging' && <MessagingTab startupId={id!} />}
                     {tab === 'documents' && <DocumentsTab documents={documents || []} handleDownload={handleDownload} />}
                     {tab === 'notes' && <NotesTab startup={s} onAddNote={(t: string) => noteMut.mutate(t)} isLoading={noteMut.isPending} />}
                     {tab === 'dilution' && <DilutionTab startup={s} />}
-                    {tab === 'team' && <TeamTab startupId={s.id} />}
+                    {tab === 'team' && <TeamTab startupId={id!} />}
                 </div>
             </div>
 
@@ -274,7 +274,7 @@ export default function StartupDetailPage() {
             {showFollowOn && <FollowOnModal onClose={() => setShowFollowOn(false)} onSubmit={(d: any) => followOnMut.mutate(d)} isLoading={followOnMut.isPending} />}
             {showEdit && <EditStartupModal startup={s} onClose={() => setShowEdit(false)} onSubmit={(d: any) => editMut.mutate(d)} isLoading={editMut.isPending} />}
             {showWriteOff && <WriteOffConfirmDialog startupName={s.name} onClose={() => setShowWriteOff(false)} onConfirm={() => writeOffMut.mutate()} isLoading={writeOffMut.isPending} />}
-            {showInvite && <InviteCompanyModal startupId={s.id} onClose={() => setShowInvite(false)} />}
+            {showInvite && <InviteCompanyModal startupId={id!} onClose={() => setShowInvite(false)} />}
         </>
     );
 }
@@ -483,42 +483,127 @@ function UpdatesTab({ updates, onAddUpdate, isActive, startupId }: any) {
         }
     }, [updates, startupId, qc]);
 
+    if (!updates || updates.length === 0) {
+        return (
+            <div className="sd-updates-wrap">
+                {isActive && (
+                    <div className="sd-tab-action-bar">
+                        <button className="sd-gold-btn" onClick={onAddUpdate}><Plus size={13} /> Add Update</button>
+                    </div>
+                )}
+                <div className="sd-empty-state">No monthly updates yet</div>
+            </div>
+        );
+    }
+
+    // Sort updates by month to calculate growth
+    const sorted = [...updates].sort((a: any, b: any) => a.month.localeCompare(b.month));
+    const latest = updates[0]; // Already sorted desc from API
+
     return (
-        <div className="sd-updates-wrap">
+        <div className="sd-updates-wrap sd-premium-updates">
+            <style>{UPDATES_CSS}</style>
             {isActive && (
                 <div className="sd-tab-action-bar">
                     <button className="sd-gold-btn" onClick={onAddUpdate}><Plus size={13} /> Add Update</button>
+                    <div className="sd-tab-hint">Drafts are only visible to the company team</div>
                 </div>
             )}
-            {updates?.length > 0 ? (
-                <div className="sd-card sd-card-flush">
-                    <table className="sd-table">
-                        <thead><tr><th>Month</th><th>Revenue</th><th>Burn</th><th>Cash</th><th>Runway</th><th>Notes</th></tr></thead>
-                        <tbody>
-                            {updates.map((u: any) => (
-                                <tr key={u.id}>
-                                    <td className="semi" style={{ position: 'relative' }}>
-                                        {formatMonth(u.month)}
-                                        {!u.isRead && <span className="sd-new-badge">NEW</span>}
-                                    </td>
-                                    <td className="mono">{formatCurrencyCompact(paiseToRupees(u.revenue))}</td>
-                                    <td className="mono">{formatCurrencyCompact(paiseToRupees(u.burnRate))}</td>
-                                    <td className="mono">{formatCurrencyCompact(paiseToRupees(u.cashBalance))}</td>
-                                    <td>
-                                        <span className="mono semi" style={{ color: u.runwayMonths < 3 ? '#f87171' : u.runwayMonths < 6 ? '#fbbf24' : '#34d399' }}>
-                                            {formatRunway(u.runwayMonths)}
-                                        </span>
-                                    </td>
-                                    <td className="muted xs">{u.notes || '—'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+
+            {/* Feature Latest Report */}
+            <div className="sd-latest-card">
+                <div className="sd-lc-hd">
+                    <div className="sd-lc-month">
+                        <Calendar size={14} />
+                        <span>Latest Report: {formatMonth(latest.month)}</span>
+                    </div>
+                    {!latest.isRead && <span className="sd-new-report-badge">NEW REPORT</span>}
                 </div>
-            ) : (
-                <div className="sd-empty-state">No monthly updates yet</div>
-            )}
+                <div className="sd-lc-grid">
+                    <div className="sd-lc-metric">
+                        <span className="sd-lcm-lbl">Revenue</span>
+                        <span className="sd-lcm-val">{formatCurrencyCompact(paiseToRupees(latest.revenue))}</span>
+                        <GrowthBadge current={latest.revenue} previous={sorted[sorted.length - 2]?.revenue} />
+                    </div>
+                    <div className="sd-lc-metric">
+                        <span className="sd-lcm-lbl">Burn Rate</span>
+                        <span className="sd-lcm-val">{formatCurrencyCompact(paiseToRupees(latest.burnRate))}</span>
+                    </div>
+                    <div className="sd-lc-metric">
+                        <span className="sd-lcm-lbl">Cash Balance</span>
+                        <span className="sd-lcm-val">{formatCurrencyCompact(paiseToRupees(latest.cashBalance))}</span>
+                    </div>
+                    <div className="sd-lc-metric">
+                        <span className="sd-lcm-lbl">Runway</span>
+                        <div className="sd-runway-vis">
+                            <span className="sd-runway-text" style={{ color: latest.runwayMonths < 3 ? '#f87171' : latest.runwayMonths < 6 ? '#fbbf24' : '#34d399' }}>
+                                {formatRunway(latest.runwayMonths)}
+                            </span>
+                            <div className="sd-rv-bar">
+                                <div className="sd-rv-fill" style={{ 
+                                    width: `${Math.min((latest.runwayMonths / 18) * 100, 100)}%`,
+                                    background: latest.runwayMonths < 3 ? '#f87171' : latest.runwayMonths < 6 ? '#fbbf24' : '#34d399'
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* History Grid */}
+            <div className="sd-updates-history">
+                <h4 className="sd-history-title">Report History</h4>
+                <div className="sd-history-list">
+                    {updates.map((u: any) => {
+                        // For growth calculation, find the match in the sorted list and get the one before it
+                        const sIdx = sorted.findIndex(s => s.id === u.id);
+                        const prev = sIdx > 0 ? sorted[sIdx - 1] : null;
+                        
+                        return (
+                            <div key={u.id} className="sd-update-row-card">
+                                <div className="sd-urc-date">
+                                    <span className="sd-urc-month">{formatMonth(u.month)}</span>
+                                    {!u.isRead && <span className="sd-dot-unread" />}
+                                </div>
+                                <div className="sd-urc-metrics">
+                                    <div className="sd-urcm">
+                                        <span className="sd-urcm-lbl">REV</span>
+                                        <span className="sd-urcm-val">{formatCurrencyCompact(paiseToRupees(u.revenue))}</span>
+                                        <GrowthBadge current={u.revenue} previous={prev?.revenue} sm />
+                                    </div>
+                                    <div className="sd-urcm">
+                                        <span className="sd-urcm-lbl">BURN</span>
+                                        <span className="sd-urcm-val">{formatCurrencyCompact(paiseToRupees(u.burnRate))}</span>
+                                    </div>
+                                    <div className="sd-urcm">
+                                        <span className="sd-urcm-lbl">CASH</span>
+                                        <span className="sd-urcm-val">{formatCurrencyCompact(paiseToRupees(u.cashBalance))}</span>
+                                    </div>
+                                </div>
+                                <div className="sd-urc-notes" title={u.notes}>
+                                    {u.notes || 'No notes provided'}
+                                </div>
+                                <ChevronRight size={14} className="sd-urc-arrow" />
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
         </div>
+    );
+}
+
+function GrowthBadge({ current, previous, sm }: { current: number; previous?: number; sm?: boolean }) {
+    if (previous === undefined || previous === null || previous === 0) return null;
+    const pct = ((current - previous) / previous) * 100;
+    const isUp = pct >= 0;
+    if (Math.abs(pct) < 0.1) return null;
+
+    return (
+        <span className={`sd-growth-badge ${isUp ? 'up' : 'down'} ${sm ? 'sm' : ''}`}>
+            {isUp ? <ArrowUpRight size={sm ? 10 : 12} /> : <ArrowDownRight size={sm ? 10 : 12} />}
+            {Math.abs(pct).toFixed(1)}%
+        </span>
     );
 }
 
@@ -1329,6 +1414,60 @@ function TeamTab({ startupId }: { startupId: string }) {
         </div>
     );
 }
+
+const UPDATES_CSS = `
+.sd-premium-updates { display: flex; flex-direction: column; gap: 24px; animation: sdUp 0.4s ease-out both; }
+.sd-tab-hint { font-size: 11px; color: #3d4f68; font-style: italic; margin-left: auto; }
+
+.sd-latest-card { 
+  background: linear-gradient(145deg, rgba(10, 22, 40, 0.7), rgba(6, 13, 25, 0.7)); 
+  border: 1px solid rgba(212, 168, 67, 0.2); border-radius: 20px; padding: 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 0 20px rgba(212,168,67,0.05);
+}
+.sd-lc-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.sd-lc-month { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #f0e6d0; font-size: 15px; }
+.sd-new-report-badge { 
+  font-size: 9px; font-weight: 900; background: #f87171; color: #fff; padding: 3px 8px; border-radius: 6px; 
+  box-shadow: 0 4px 12px rgba(248,113,113,0.3); letter-spacing: 0.5px;
+}
+
+.sd-lc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.sd-lc-metric { display: flex; flex-direction: column; gap: 4px; }
+.sd-lcm-lbl { font-family: var(--font-mono); font-size: 10px; color: #3d4f68; letter-spacing: 1px; text-transform: uppercase; }
+.sd-lcm-val { font-size: 20px; font-weight: 800; color: #f0e6d0; letter-spacing: -0.01em; }
+
+.sd-growth-badge { 
+  display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; margin-top: 4px;
+}
+.sd-growth-badge.up { color: #34d399; }
+.sd-growth-badge.down { color: #f87171; }
+.sd-growth-badge.sm { font-size: 10px; margin-top: 0; }
+
+.sd-runway-vis { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.sd-runway-text { font-size: 13px; font-weight: 700; }
+.sd-rv-bar { height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+.sd-rv-fill { height: 100%; transition: width 1s ease-out; }
+
+.sd-history-title { font-size: 14px; font-weight: 700; color: #f0e6d0; margin-bottom: 4px; }
+.sd-history-list { display: flex; flex-direction: column; gap: 10px; }
+.sd-update-row-card { 
+  display: flex; align-items: center; gap: 20px; padding: 14px 20px;
+  background: rgba(10, 22, 40, 0.4); border: 1px solid rgba(212, 168, 67, 0.08); border-radius: 14px;
+  transition: all 0.2s; cursor: pointer;
+}
+.sd-update-row-card:hover { background: rgba(10, 22, 40, 0.6); border-color: rgba(212, 168, 67, 0.2); transform: translateX(4px); }
+.sd-urc-date { width: 100px; display: flex; align-items: center; gap: 8px; }
+.sd-urc-month { font-size: 13px; font-weight: 600; color: #f0e6d0; }
+.sd-dot-unread { width: 6px; height: 6px; border-radius: 50%; background: #f87171; box-shadow: 0 0 6px #f87171; }
+
+.sd-urc-metrics { display: flex; gap: 32px; flex: 1; }
+.sd-urcm { display: flex; align-items: baseline; gap: 8px; }
+.sd-urcm-lbl { font-family: var(--font-mono); font-size: 9px; color: #2d3a4f; }
+.sd-urcm-val { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: #ede8db; }
+
+.sd-urc-notes { flex: 1.5; font-size: 12px; color: #3d4f68; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+.sd-urc-arrow { color: #2d3a4f; }
+`;
 
 const TEAM_CSS = `
 .sd-team-root { display: flex; flex-direction: column; gap: 40px; }

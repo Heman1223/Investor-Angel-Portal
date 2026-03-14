@@ -30,15 +30,8 @@ export async function createInvite(investorId: string, startupId: string, email:
         throw createAppError('You do not have permission to invite users to this startup', 403, 'FORBIDDEN');
     }
 
-    // Check if email already belongs to an investor (role confusion prevention)
-    const existingUser = await prisma.investor.findUnique({ where: { email: email.toLowerCase() } });
-    if (existingUser && existingUser.role === 'INVESTOR') {
-        throw createAppError(
-            'This email belongs to an investor account. Company invites cannot be sent to investor emails.',
-            400, 'VALIDATION_ERROR'
-        );
-    }
-
+    // Note: We allow invites to any email, including existing investor accounts.
+    // The founder may also be an investor, or may register as a company user later.
     // Check for existing pending invite to same email for same startup
     const existingInvite = await prisma.companyInvite.findFirst({
         where: {
@@ -96,19 +89,27 @@ export async function acceptInvite(token: string, userId: string) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-        // Create membership
-        await tx.companyMembership.create({
-            data: {
+        // Create or update membership (upsert to avoid duplicate errors)
+        await tx.companyMembership.upsert({
+            where: { userId_startupId: { userId, startupId: invite.startupId } },
+            create: {
                 userId,
                 startupId: invite.startupId,
                 role: invite.companyRole,
-            }
+            },
+            update: { role: invite.companyRole },
         });
 
         // Mark invite accepted
         const updated = await tx.companyInvite.update({
             where: { id: invite.id },
             data: { status: 'ACCEPTED', acceptedAt: new Date() }
+        });
+
+        // Mark startup as active
+        await tx.startup.update({
+            where: { id: invite.startupId },
+            data: { status: 'active' }
         });
 
         return updated;
@@ -133,19 +134,27 @@ export async function acceptInviteForUser(userId: string, email: string, inviteI
     }
 
     const result = await prisma.$transaction(async (tx) => {
-        // Create membership
-        await tx.companyMembership.create({
-            data: {
+        // Create or update membership (upsert to avoid duplicate errors)
+        await tx.companyMembership.upsert({
+            where: { userId_startupId: { userId, startupId: invite.startupId } },
+            create: {
                 userId,
                 startupId: invite.startupId,
                 role: invite.companyRole,
-            }
+            },
+            update: { role: invite.companyRole },
         });
 
         // Mark invite accepted
         const updated = await tx.companyInvite.update({
             where: { id: invite.id },
             data: { status: 'ACCEPTED', acceptedAt: new Date() }
+        });
+
+        // Mark startup as active
+        await tx.startup.update({
+            where: { id: invite.startupId },
+            data: { status: 'active' }
         });
 
         return updated;

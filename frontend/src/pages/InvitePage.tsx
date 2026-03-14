@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../services/api';
+import { authAPI, companyAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { Shield, Mail, User, Lock, Eye, EyeOff, ArrowRight, Check } from 'lucide-react';
 
@@ -24,7 +24,22 @@ export default function InvitePage() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            navigate('/company/dashboard');
+            if (token) {
+                // Automatically accept for logged-in users
+                setVerifying(true);
+                companyAPI.acceptInviteByToken(token)
+                    .then(() => {
+                        toast.success('Invitation accepted!');
+                        navigate('/company/dashboard');
+                    })
+                    .catch(err => {
+                        console.error('Invite acceptance error:', err);
+                        setInviteError(err.response?.data?.error?.message || 'Failed to accept invitation');
+                        setVerifying(false);
+                    });
+            } else {
+                navigate('/company/dashboard');
+            }
             return;
         }
 

@@ -72,8 +72,18 @@ export default function CompanyUpdates() {
                     </div>
                 ) : (
                     <div className="u-list">
+                        <div className="u-table-header">
+                            <div className="u-th">STATUS / PERIOD</div>
+                            <div className="u-th">NOTIFIED INVESTORS</div>
+                            <div className="u-th u-text-right">REVENUE</div>
+                            <div className="u-th u-text-right">BURN RATE</div>
+                            <div className="u-th u-text-right">RUNWAY</div>
+                            <div className="u-th"></div>
+                        </div>
                         {updatesList.map((update: any, idx: number) => {
                             const isDraft = update.status === 'DRAFT';
+                            const notifiedInvestors = update.reads?.map((r: any) => r.investor.name).join(', ') || 'N/A';
+                            
                             return (
                                 <div
                                     key={update.id}
@@ -89,23 +99,29 @@ export default function CompanyUpdates() {
                                                 <span className="u-badge u-badge-published"><ChevronRight size={10} /> PUBLISHED</span>
                                             )}
                                         </div>
-                                        <h3 className="u-card-startup">{update.startup.name}</h3>
                                         <div className="u-card-date">
                                             <Calendar size={13} />
-                                            <span>Period: {update.month}</span>
+                                            <span>{update.month}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="u-card-investors">
+                                        <div className="u-investors-label">INVESTORS</div>
+                                        <div className="u-investors-list" title={notifiedInvestors}>
+                                            {notifiedInvestors}
                                         </div>
                                     </div>
 
                                     <div className="u-card-metrics">
-                                        <div className="u-card-metric">
-                                            <span className="u-metric-lbl">MRR / REVENUE</span>
+                                        <div className="u-card-metric u-text-right">
+                                            <span className="u-metric-lbl">REVENUE</span>
                                             <span className="u-metric-val">{formatCurrencyCompact(update.revenue)}</span>
                                         </div>
-                                        <div className="u-card-metric">
+                                        <div className="u-card-metric u-text-right">
                                             <span className="u-metric-lbl">BURN RATE</span>
                                             <span className="u-metric-val" style={{ color: '#F87171' }}>{formatCurrencyCompact(update.burnRate)}</span>
                                         </div>
-                                        <div className="u-card-metric">
+                                        <div className="u-card-metric u-text-right">
                                             <span className="u-metric-lbl">RUNWAY</span>
                                             <span className="u-metric-val" style={{ color: '#60A5FA' }}>
                                                 {update.runwayMonths !== null ? `${update.runwayMonths} mo` : 'N/A'}
@@ -155,32 +171,40 @@ const UPDATES_CSS = `
 .u-btn-primary { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #d4a843, #e8c468); border: none; border-radius: 12px; font-size: 14px; font-weight: 600; color: #060d19; text-decoration: none; transition: all 0.25s; box-shadow: 0 4px 16px rgba(212,168,67,0.25); }
 .u-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(212,168,67,0.35); filter: brightness(1.05); }
 
-.u-list { display: flex; flex-direction: column; gap: 12px; }
+.u-list { display: flex; flex-direction: column; gap: 8px; }
+
+.u-table-header { display: grid; grid-template-columns: 1.2fr 1.8fr 1fr 1fr 1fr 0.4fr; gap: 20px; padding: 12px 24px; color: #2d3a4f; font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; border-bottom: 1px solid rgba(212,168,67,0.08); margin-bottom: 8px; }
+.u-text-right { text-align: right; }
 
 .u-card {
-  background: rgba(10,22,40,0.55); border: 1px solid rgba(212,168,67,0.08); border-radius: 18px; padding: 20px 24px;
-  display: grid; grid-template-columns: 1.5fr 2fr auto; align-items: center; gap: 20px;
+  background: rgba(10,22,40,0.55); border: 1px solid rgba(212,168,67,0.08); border-radius: 18px; padding: 16px 24px;
+  display: grid; grid-template-columns: 1.2fr 1.8fr 1fr 1fr 1fr 0.4fr; align-items: center; gap: 20px;
   cursor: pointer; position: relative; overflow: hidden; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
   transition: all 0.3s var(--ease-out); opacity: 0; animation: u-fadein 0.5s var(--ease-out) forwards;
 }
 .u-card:hover { border-color: rgba(212,168,67,0.18); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); background: rgba(12,25,45,0.7); }
 
-.u-card-left { display: flex; flex-direction: column; gap: 6px; }
-.u-card-startup { font-size: 18px; font-weight: 700; color: var(--cream, #f0e6d0); }
-.u-card-date { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono, 'JetBrains Mono', monospace); font-size: 11px; color: #3d4f68; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+.u-card-left { display: flex; flex-direction: column; gap: 4px; }
+.u-card-startup { font-size: 17px; font-weight: 700; color: var(--cream, #f0e6d0); }
+.u-card-date { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono, 'JetBrains Mono', monospace); font-size: 12px; color: #d4a843; font-weight: 700; }
 
-.u-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-family: var(--font-mono, 'JetBrains Mono', monospace); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; width: fit-content; margin-bottom: 4px; }
+.u-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-family: var(--font-mono, 'JetBrains Mono', monospace); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; width: fit-content; margin-bottom: 2px; }
 .u-badge-draft { background: rgba(107,122,148,0.12); color: #6b7a94; border: 1px solid rgba(107,122,148,0.2); }
 .u-badge-published { background: rgba(52,211,153,0.1); color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
 
-.u-card-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 0 20px; border-left: 1px solid rgba(212,168,67,0.08); border-right: 1px solid rgba(212,168,67,0.08); }
-.u-card-metric { display: flex; flex-direction: column; gap: 4px; }
-.u-metric-lbl { font-family: var(--font-mono, 'JetBrains Mono', monospace); font-size: 9px; font-weight: 600; color: #2d3a4f; letter-spacing: 0.08em; }
-.u-metric-val { font-size: 15px; font-weight: 700; color: var(--cream, #f0e6d0); }
+.u-card-investors { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.u-investors-label { font-family: var(--font-mono); font-size: 9px; color: #2d3a4f; letter-spacing: 0.1em; display: none; }
+.u-investors-list { font-size: 13px; color: #8b9bb4; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.u-card-metrics { display: contents; }
+.u-card-metric { display: flex; flex-direction: column; gap: 2px; }
+.u-metric-lbl { font-family: var(--font-mono, 'JetBrains Mono', monospace); font-size: 9px; font-weight: 600; color: #2d3a4f; letter-spacing: 0.08em; display: none; }
+.u-metric-val { font-size: 14px; font-weight: 700; color: var(--cream, #f0e6d0); }
 
 .u-card-right { display: flex; align-items: center; justify-content: flex-end; }
-.u-view-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #d4a843; opacity: 0.6; transition: all 0.2s; }
-.u-card:hover .u-view-btn { opacity: 1; transform: translateX(2px); }
+.u-view-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: rgba(212,168,67,0.08); color: #d4a843; transition: all 0.2s; }
+.u-card:hover .u-view-btn { background: #d4a843; color: #060d19; transform: translateX(2px); }
+.u-view-btn span { display: none; }
 
 .u-card-hover-edge { position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px; background: #d4a843; border-radius: 0 4px 4px 0; transform: scaleY(0); transition: transform 0.3s var(--ease-spring); }
 .u-card:hover .u-card-hover-edge { transform: scaleY(1); }
@@ -190,8 +214,12 @@ const UPDATES_CSS = `
 .u-empty-title { font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif); font-size: 22px; font-weight: 700; color: var(--cream, #f0e6d0); margin-bottom: 10px; }
 .u-empty-sub { font-size: 14px; color: #3d4f68; margin-bottom: 30px; max-width: 320px; line-height: 1.6; }
 
-@media (max-width: 900px) {
-  .u-card { grid-template-columns: 1fr auto; }
-  .u-card-metrics { display: none; }
+@media (max-width: 1000px) {
+  .u-table-header { display: none; }
+  .u-card { grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; }
+  .u-card-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; grid-column: span 2; padding-top: 16px; border-top: 1px solid rgba(212,168,67,0.08); }
+  .u-metric-lbl, .u-investors-label { display: block; }
+  .u-card-right { position: absolute; right: 20px; top: 20px; }
+  .u-text-right { text-align: left; }
 }
 `;

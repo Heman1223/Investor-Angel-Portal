@@ -172,6 +172,12 @@ export async function registerCompanyUser(name: string, email: string, password:
             data: { status: 'ACCEPTED', acceptedAt: new Date() }
         });
 
+        // Mark startup as active since the founder has joined
+        await tx.startup.update({
+            where: { id: invite.startupId },
+            data: { status: 'active' }
+        });
+
         return user;
     });
 

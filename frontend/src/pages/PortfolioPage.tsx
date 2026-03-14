@@ -175,8 +175,8 @@ export default function PortfolioPage() {
                     </div>
 
                     <div className="pf-filter-group" onClick={e => e.stopPropagation()}>
-                        <DropFilter label="Status" value={statusFilter} options={['', 'active', 'exited', 'written_off']}
-                            labels={{ '': "All", 'active': 'Active', 'exited': 'Exited', 'written_off': 'Written Off' }}
+                        <DropFilter label="Status" value={statusFilter} options={['', 'active', 'pending', 'exited', 'written_off']}
+                            labels={{ '': "All", 'active': 'Active', 'pending': 'Pending', 'exited': 'Exited', 'written_off': 'Written Off' }}
                             open={openDrop === 'status'} onToggle={() => setOpenDrop(openDrop === 'status' ? null : 'status')}
                             onChange={(v: string) => { setStatus(v); setPage(1); setOpenDrop(null); }} />
                         <DropFilter label="Sector" value={sectorFilter} options={['', ...SECTORS]}
@@ -393,6 +393,7 @@ function CardItem({ startup: s, index: i, onClick }: any) {
 function StatusPill({ status }: { status: string }) {
     const cfg: any = {
         active: { bg: 'rgba(52,211,153,.1)', color: '#34d399', dot: '#34d399', label: 'Active' },
+        pending: { bg: 'rgba(251,191,36,.1)', color: '#fbbf24', dot: '#fbbf24', label: 'Pending' },
         exited: { bg: 'rgba(148,163,184,.1)', color: '#94a3b8', dot: '#94a3b8', label: 'Exited' },
         written_off: { bg: 'rgba(248,113,113,.1)', color: '#f87171', dot: '#f87171', label: 'Written Off' },
     };
@@ -448,7 +449,7 @@ function EmptyState({ onAdd, children }: any) {
 
 /* ── Add Modal ── */
 function AddInvestmentModal({ onClose, onSubmit, isLoading }: { onClose: () => void; onSubmit: (d: any) => void; isLoading: boolean }) {
-    const [form, setForm] = useState({ name: '', sector: 'FinTech', stage: 'Seed', investmentDate: '', entryValuation: '', investedAmount: '', equityPercent: '', founderName: '', description: '' });
+    const [form, setForm] = useState({ name: '', sector: 'FinTech', stage: 'Seed', investmentDate: '', entryValuation: '', investedAmount: '', equityPercent: '', founderName: '', founderEmail: '', description: '' });
     const implied = form.investedAmount && form.entryValuation ? ((+form.investedAmount / +form.entryValuation) * 100).toFixed(2) : null;
     const F = (k: string) => (e: any) => setForm({ ...form, [k]: e.target.value });
 
@@ -494,6 +495,10 @@ function AddInvestmentModal({ onClose, onSubmit, isLoading }: { onClose: () => v
                             <input className="pf-input" value={form.founderName} onChange={F('founderName')} placeholder="Optional" />
                         </Field>
                     </div>
+                    <Field label="Founder Email" required>
+                        <input type="email" className="pf-input pf-input-highlight" value={form.founderEmail} onChange={F('founderEmail')} required placeholder="arjun@startup.io" />
+                        <p className="pf-field-hint">This email is required to send the invitation to the startup founder.</p>
+                    </Field>
                     {implied && (
                         <div className="pf-implied">
                             <span>Implied equity at entry valuation</span>
@@ -777,6 +782,9 @@ function PortfolioStyles() {
     -webkit-appearance:none;
 }
 .pf-input:focus { border-color:var(--gold-bd); background:rgba(212,168,67,.04); }
+.pf-input-highlight { border-color: rgba(212,168,67, 0.4); background: rgba(212,168,67, 0.05); box-shadow: 0 0 10px rgba(212,168,67, 0.1); }
+.pf-input-highlight:focus { border-color: var(--gold); background: rgba(212,168,67, 0.08); box-shadow: 0 0 15px rgba(212,168,67, 0.2); }
+.pf-field-hint { font-size: 10px; color: var(--gold); opacity: 0.8; margin-top: 4px; font-weight: 500; }
 .pf-select { cursor:pointer; }
 .pf-implied { display:flex; justify-content:space-between; align-items:center; background:var(--gold-lt); border:1px solid var(--gold-bd); border-radius:var(--r-sm); padding:11px 14px; }
 .pf-implied span:first-child { font-size:11.5px; color:var(--t2); }

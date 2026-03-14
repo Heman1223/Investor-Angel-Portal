@@ -6,15 +6,24 @@ import { runAlertEngine } from './alerts.service';
 import { invalidateAnalyticsCache } from './analytics.service';
 
 export async function getUpdates(investorId: string, startupId: string) {
-    const startup = await prisma.startup.findFirst({
+    // Check if investor is primary owner or has an Investment record (co-investor)
+    const isOwner = await prisma.startup.findFirst({
         where: { id: startupId, investorId }
     });
-    if (!startup) {
-        throw createAppError('Startup not found', 404, 'NOT_FOUND');
+    
+    const hasInvestment = await prisma.investment.findUnique({
+        where: { investorId_startupId: { investorId, startupId } }
+    });
+
+    if (!isOwner && !hasInvestment) {
+        throw createAppError('Startup not found or access denied', 404, 'NOT_FOUND');
     }
 
     const updates = await prisma.monthlyUpdate.findMany({
-        where: { startupId },
+        where: { 
+            startupId,
+            status: 'SUBMITTED' // Investors should only see submitted reports, not drafts
+        },
         orderBy: { month: 'desc' },
         include: {
             reads: {

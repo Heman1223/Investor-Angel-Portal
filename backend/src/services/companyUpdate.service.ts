@@ -18,17 +18,37 @@ export async function getCompanyStartups(userId: string) {
                     monthlyUpdates: {
                         orderBy: { month: 'desc' },
                         take: 1,
+                    },
+                    investor: {
+                        select: { id: true, name: true, email: true }
+                    },
+                    investments: {
+                        select: {
+                            investor: { select: { id: true, name: true, email: true } }
+                        }
                     }
                 }
             }
         }
     });
 
-    return memberships.map(m => ({
-        ...m.startup,
-        membershipRole: m.role,
-        latestUpdate: m.startup.monthlyUpdates[0] || null,
-    }));
+    return memberships.map(m => {
+        const primaryInvestor = m.startup.investor;
+        const otherInvestors = m.startup.investments.map(inv => inv.investor);
+
+        const allInvestorsMap = new Map();
+        if (primaryInvestor) allInvestorsMap.set(primaryInvestor.email, primaryInvestor);
+        for (const inv of otherInvestors) {
+            allInvestorsMap.set(inv.email, inv);
+        }
+
+        return {
+            ...m.startup,
+            investors: Array.from(allInvestorsMap.values()),
+            membershipRole: m.role,
+            latestUpdate: m.startup.monthlyUpdates[0] || null,
+        };
+    });
 }
 
 /**
@@ -47,6 +67,11 @@ export async function getCompanyUpdates(userId: string, startupId: string) {
         where: { startupId },
         orderBy: { month: 'desc' },
         include: {
+            reads: {
+                include: {
+                    investor: { select: { id: true, name: true, email: true } }
+                }
+            },
             revisions: {
                 orderBy: { createdAt: 'desc' }
             }
@@ -67,16 +92,23 @@ export async function getAllCompanyUpdates(userId: string) {
 
     if (startupIds.length === 0) return [];
 
-    return prisma.monthlyUpdate.findMany({
+    const updates = await prisma.monthlyUpdate.findMany({
         where: { startupId: { in: startupIds } },
         orderBy: { month: 'desc' },
         include: {
-            startup: { select: { name: true } },
+            startup: { select: { id: true, name: true } },
+            reads: {
+                include: {
+                    investor: { select: { id: true, name: true, email: true } }
+                }
+            },
             revisions: {
                 orderBy: { createdAt: 'desc' }
             }
         }
     });
+
+    return updates;
 }
 
 /**
@@ -203,7 +235,7 @@ export async function editDraft(
  * Submit a draft update — transitions DRAFT → SUBMITTED.
  * Creates StartupUpdateRead for all linked investors and triggers alerts.
  */
-export async function submitUpdate(userId: string, updateId: string) {
+export async function submitUpdate(userId: string, updateId: string, targetInvestorIds?: string[]) {
     const update = await prisma.monthlyUpdate.findUnique({ where: { id: updateId } });
     if (!update) {
         throw createAppError('Update not found', 404, 'NOT_FOUND');
@@ -236,7 +268,11 @@ export async function submitUpdate(userId: string, updateId: string) {
     investments.forEach(i => linkedInvestors.set(i.investorId, i.investor));
     if (startup) linkedInvestors.set(startup.investorId, startup.investor);
 
-    const investorIds = Array.from(linkedInvestors.keys());
+    // If targetInvestorIds is provided, filter the linked investors
+    let finalInvestorIds = Array.from(linkedInvestors.keys());
+    if (targetInvestorIds && targetInvestorIds.length > 0) {
+        finalInvestorIds = finalInvestorIds.filter(id => targetInvestorIds.includes(id));
+    }
 
     const result = await prisma.$transaction(async (tx) => {
         // Update status to SUBMITTED
@@ -245,8 +281,8 @@ export async function submitUpdate(userId: string, updateId: string) {
             data: { status: 'SUBMITTED' }
         });
 
-        // Create unread records for all linked investors
-        const readRecords = Array.from(investorIds).map(investorId => ({
+        // Create unread records for target investors
+        const readRecords = finalInvestorIds.map(investorId => ({
             updateId: submitted.id,
             investorId,
         }));
@@ -272,8 +308,8 @@ export async function submitUpdate(userId: string, updateId: string) {
     // Post-transaction side effects
     invalidateAnalyticsCache();
 
-    // Run alert engine for each linked investor
-    for (const investorId of investorIds) {
+    // Run alert engine for each target investor
+    for (const investorId of finalInvestorIds) {
         await runAlertEngine(investorId, update.startupId).catch(() => { });
     }
 
@@ -281,11 +317,12 @@ export async function submitUpdate(userId: string, updateId: string) {
         getIO().to(`startup_${update.startupId}`).emit('new_update_submitted', { startupId: update.startupId, updateId: result.id });
     } catch (err) { }
 
-    // Dispatch emails
+    // Dispatch emails to target investors
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const updateUrl = `${frontendUrl}/portfolio/${update.startupId}`;
-    for (const [id, user] of linkedInvestors.entries()) {
-        if (user.notificationPreference === 'IMMEDIATE') {
+    for (const investorId of finalInvestorIds) {
+        const user = linkedInvestors.get(investorId);
+        if (user && user.notificationPreference === 'IMMEDIATE') {
             await sendNewUpdateEmail(user.email, startup?.name || 'A Startup in your portfolio', updateUrl).catch(() => { });
         }
     }

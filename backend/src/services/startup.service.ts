@@ -11,6 +11,8 @@ import {
     calculateYearsHeld,
     calculateUnrealisedGain,
 } from './financials.service';
+import crypto from 'crypto';
+import { sendInviteEmail } from './notification.service';
 
 export async function createStartup(
     investorId: string,
@@ -21,35 +23,86 @@ export async function createStartup(
         coInvestors?: string;
     }
 ) {
-    // Convert to paise
     const entryValuationPaise = Math.round(data.entryValuation * 100);
     const investedAmountPaise = Math.round(data.investedAmount * 100);
 
-    const startup = await prisma.startup.create({
-        data: {
-            investorId,
-            name: data.name,
-            sector: data.sector,
-            stage: data.stage,
-            status: 'active',
-            entryValuation: entryValuationPaise,
-            currentValuation: entryValuationPaise,
-            equityPercent: data.equityPercent,
-            currentEquityPercent: data.equityPercent,
-            investmentDate: new Date(data.investmentDate),
-            description: data.description,
-            website: data.website,
-            founderName: data.founderName,
-            founderEmail: data.founderEmail,
-            coInvestors: data.coInvestors,
+    let startupId: string;
+    let existingStartup = null;
+
+    if (data.founderEmail) {
+        existingStartup = await prisma.startup.findFirst({
+            where: { founderEmail: data.founderEmail.toLowerCase() }
+        });
+    }
+
+    if (existingStartup) {
+        startupId = existingStartup.id;
+
+        // Check if investment link already exists, if not create it
+        const existingInv = await prisma.investment.findFirst({
+            where: { investorId, startupId }
+        });
+
+        if (!existingInv) {
+            await prisma.investment.create({
+                data: {
+                    investorId,
+                    startupId,
+                    amount: investedAmountPaise,
+                    date: new Date(data.investmentDate)
+                }
+            });
         }
-    });
+    } else {
+        const startup = await prisma.startup.create({
+            data: {
+                investorId,
+                name: data.name,
+                sector: data.sector,
+                stage: data.stage,
+                status: data.founderEmail ? 'pending' : 'active',
+                entryValuation: entryValuationPaise,
+                currentValuation: entryValuationPaise,
+                equityPercent: data.equityPercent,
+                currentEquityPercent: data.equityPercent,
+                investmentDate: new Date(data.investmentDate),
+                description: data.description,
+                website: data.website,
+                founderName: data.founderName,
+                founderEmail: data.founderEmail ? data.founderEmail.toLowerCase() : null,
+                coInvestors: data.coInvestors,
+            }
+        });
+        startupId = startup.id;
+
+        if (data.founderEmail) {
+            const token = crypto.randomBytes(32).toString('hex');
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+
+            await prisma.companyInvite.create({
+                data: {
+                    startupId: startup.id,
+                    invitedBy: investorId,
+                    email: data.founderEmail.toLowerCase(),
+                    token,
+                    status: 'PENDING',
+                    companyRole: 'admin',
+                    expiresAt,
+                }
+            });
+
+            // Send the invite email to the founder
+            const inviteUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/invite/${token}`;
+            await sendInviteEmail(data.founderEmail, data.name, inviteUrl).catch(console.error);
+        }
+    }
 
     // Create initial investment cashflow (negative = outflow)
     await prisma.cashflow.create({
         data: {
             investorId,
-            startupId: startup.id,
+            startupId: startupId,
             amount: -investedAmountPaise,
             date: new Date(data.investmentDate),
             type: 'investment',
@@ -66,18 +119,23 @@ export async function createStartup(
         investorId,
         action: 'CREATE_INVESTMENT',
         entityType: 'startup',
-        entityId: startup.id,
+        entityId: startupId,
         newValue: { name: data.name, invested: data.investedAmount, equity: data.equityPercent },
     });
 
     invalidateAnalyticsCache();
-    runAlertEngine(investorId, startup.id).catch(() => { });
+    runAlertEngine(investorId, startupId).catch(() => { });
 
-    return startup;
+    return prisma.startup.findUniqueOrThrow({ where: { id: startupId } });
 }
 
 export async function getAllStartups(investorId: string, status?: string) {
-    const filter: any = { investorId };
+    const filter: any = {
+        OR: [
+            { investorId },
+            { investments: { some: { investorId } } }
+        ]
+    };
     if (status) filter.status = status;
 
     const startups = await prisma.startup.findMany({
@@ -124,7 +182,7 @@ export async function getAllStartups(investorId: string, status?: string) {
         }
 
         const xirrCashflows = startupCashflows.map(cf => ({ amount: cf.amount, date: cf.date }));
-        if (startup.status === 'active' || startup.status === 'watchlist') {
+        if (startup.status === 'active' || startup.status === 'watchlist' || startup.status === 'pending') {
             xirrCashflows.push({ amount: currentValue, date: new Date() });
         }
 
@@ -140,7 +198,7 @@ export async function getAllStartups(investorId: string, status?: string) {
                 moic: calculateMOIC(invested, currentValue),
                 xirr: calculateXIRR(xirrCashflows),
                 cagr: calculateCAGR(invested, currentValue, calculateYearsHeld(startup.investmentDate)),
-                unrealisedGain: startup.status === 'active'
+                unrealisedGain: (startup.status === 'active' || startup.status === 'pending')
                     ? calculateUnrealisedGain(invested, startup.currentValuation, startup.entryValuation)
                     : 0,
             },
@@ -150,7 +208,13 @@ export async function getAllStartups(investorId: string, status?: string) {
 
 export async function getStartupById(investorId: string, startupId: string) {
     const startup = await prisma.startup.findFirst({
-        where: { id: startupId, investorId }
+        where: {
+            id: startupId,
+            OR: [
+                { investorId },
+                { investments: { some: { investorId } } }
+            ]
+        }
     });
 
     if (!startup) {
@@ -220,7 +284,14 @@ export async function updateStartup(
     req?: { ip?: string; headers?: Record<string, any> }
 ) {
     const startup = await prisma.startup.findFirst({
-        where: { id: startupId, investorId }
+        where: {
+            id: startupId,
+            OR: [
+                { investorId },
+                { investments: { some: { investorId } } },
+                { companyMemberships: { some: { userId: investorId } } }
+            ]
+        }
     });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
@@ -256,7 +327,13 @@ export async function updateStartup(
 
 export async function updateValuation(investorId: string, startupId: string, currentValuation: number) {
     const startup = await prisma.startup.findFirst({
-        where: { id: startupId, investorId }
+        where: {
+            id: startupId,
+            OR: [
+                { investorId },
+                { investments: { some: { investorId } } }
+            ]
+        }
     });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
@@ -289,7 +366,14 @@ export async function recordExit(
     data: { exitDate: string; exitValue: number; exitType: string }
 ) {
     const startup = await prisma.startup.findFirst({
-        where: { id: startupId, investorId, status: 'active' }
+        where: {
+            id: startupId,
+            status: 'active',
+            OR: [
+                { investorId },
+                { investments: { some: { investorId } } }
+            ]
+        }
     });
     if (!startup) {
         throw createAppError('Active startup not found', 404, 'NOT_FOUND');
@@ -337,7 +421,13 @@ export async function addFollowOn(
     data: { amount: number; date: string; roundName: string; equityAcquired: number; valuationAtTime: number }
 ) {
     const startup = await prisma.startup.findFirst({
-        where: { id: startupId, investorId }
+        where: {
+            id: startupId,
+            OR: [
+                { investorId },
+                { investments: { some: { investorId } } }
+            ]
+        }
     });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
@@ -401,7 +491,13 @@ export async function addFollowOn(
 
 export async function addNote(investorId: string, startupId: string, text: string) {
     const startup = await prisma.startup.findFirst({
-        where: { id: startupId, investorId }
+        where: {
+            id: startupId,
+            OR: [
+                { investorId },
+                { investments: { some: { investorId } } }
+            ]
+        }
     });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');
@@ -429,7 +525,13 @@ export async function addNote(investorId: string, startupId: string, text: strin
 
 export async function softDeleteStartup(investorId: string, startupId: string) {
     const startup = await prisma.startup.findFirst({
-        where: { id: startupId, investorId }
+        where: {
+            id: startupId,
+            OR: [
+                { investorId },
+                { investments: { some: { investorId } } }
+            ]
+        }
     });
     if (!startup) {
         throw createAppError('Startup not found', 404, 'NOT_FOUND');

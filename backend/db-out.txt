@@ -1,0 +1,491 @@
+--- STARTUPS ---
+[
+  {
+    "id": "cmmmgsjas000fp29wbfotyao7",
+    "investorId": "cmmmgshcs000dp29w0kfxm438",
+    "name": "Startup Test",
+    "sector": "Tech",
+    "stage": "Seed",
+    "status": "active",
+    "entryValuation": 100000000,
+    "currentValuation": 100000000,
+    "equityPercent": 5,
+    "currentEquityPercent": 5,
+    "investmentDate": "2026-01-01T00:00:00.000Z",
+    "description": null,
+    "website": null,
+    "founderName": "Founder 1",
+    "founderEmail": "founder1_new@test.com",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-11T20:01:22.612Z",
+    "updatedAt": "2026-03-11T20:01:22.612Z"
+  },
+  {
+    "id": "cmmmgtg57000tp29wcydbsppf",
+    "investorId": "cmmmgtego000rp29wdx79cmei",
+    "name": "Startup Test",
+    "sector": "Tech",
+    "stage": "Seed",
+    "status": "active",
+    "entryValuation": 100000000,
+    "currentValuation": 100000000,
+    "equityPercent": 5,
+    "currentEquityPercent": 5,
+    "investmentDate": "2026-01-01T00:00:00.000Z",
+    "description": null,
+    "website": null,
+    "founderName": "Founder 1",
+    "founderEmail": "founder1_500@test.com",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-11T20:02:05.179Z",
+    "updatedAt": "2026-03-11T20:02:05.179Z"
+  },
+  {
+    "id": "cmmmgufof0017p29w57k39nne",
+    "investorId": "cmmmgud4k0015p29w4eapxhfz",
+    "name": "Startup Test",
+    "sector": "Tech",
+    "stage": "Seed",
+    "status": "active",
+    "entryValuation": 100000000,
+    "currentValuation": 100000000,
+    "equityPercent": 5,
+    "currentEquityPercent": 5,
+    "investmentDate": "2026-01-01T00:00:00.000Z",
+    "description": null,
+    "website": null,
+    "founderName": "Founder 1",
+    "founderEmail": "founder1_700@test.com",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-11T20:02:51.231Z",
+    "updatedAt": "2026-03-11T20:02:51.231Z"
+  },
+  {
+    "id": "cmmmgxrop0002p23d1z1mj2d8",
+    "investorId": "cmmmgxpz20000p23dsr59hrtl",
+    "name": "Startup Test",
+    "sector": "Tech",
+    "stage": "Seed",
+    "status": "active",
+    "entryValuation": 100000000,
+    "currentValuation": 100000000,
+    "equityPercent": 5,
+    "currentEquityPercent": 5,
+    "investmentDate": "2026-01-01T00:00:00.000Z",
+    "description": null,
+    "website": null,
+    "founderName": "Founder 1",
+    "founderEmail": "founder1_800@test.com",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-11T20:05:26.760Z",
+    "updatedAt": "2026-03-11T20:05:38.245Z"
+  },
+  {
+    "id": "cmmmgj7de0002p29wmxqs1z6j",
+    "investorId": "cmmjiljj40000eq54a3xa3s0l",
+    "name": "testing sasha",
+    "sector": "DeepTech",
+    "stage": "Series C",
+    "status": "active",
+    "entryValuation": 100000000,
+    "currentValuation": 100000000,
+    "equityPercent": 8,
+    "currentEquityPercent": 8,
+    "investmentDate": "2026-03-07T00:00:00.000Z",
+    "description": "",
+    "website": null,
+    "founderName": "sasha",
+    "founderEmail": "s1@gmail.com",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-11T19:54:07.250Z",
+    "updatedAt": "2026-03-11T20:09:54.156Z"
+  },
+  {
+    "id": "cmmjilka50002eq54a95wnhy9",
+    "investorId": "cmmjiljj40000eq54a3xa3s0l",
+    "name": "Finly",
+    "sector": "FinTech",
+    "stage": "Series A",
+    "status": "active",
+    "entryValuation": 800000000,
+    "currentValuation": 2200000000,
+    "equityPercent": 8.5,
+    "currentEquityPercent": 8.5,
+    "investmentDate": "2023-03-15T00:00:00.000Z",
+    "description": "Digital-first personal finance platform for millennials",
+    "website": "https://finly.in",
+    "founderName": "Ravi Kumar",
+    "founderEmail": "ravi@finly.in",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-09T18:28:37.997Z",
+    "updatedAt": "2026-03-09T18:28:37.997Z"
+  },
+  {
+    "id": "cmmjillws0006eq54bqc2ykg8",
+    "investorId": "cmmjiljj40000eq54a3xa3s0l",
+    "name": "HealthNode",
+    "sector": "HealthTech",
+    "stage": "Seed",
+    "status": "active",
+    "entryValuation": 3000000000,
+    "currentValuation": 950000000,
+    "equityPercent": 4.2,
+    "currentEquityPercent": 4.2,
+    "investmentDate": "2023-06-20T00:00:00.000Z",
+    "description": "AI-powered diagnostic assistance for rural clinics",
+    "website": "https://healthnode.io",
+    "founderName": "Priya Sharma",
+    "founderEmail": "priya@healthnode.io",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-09T18:28:40.108Z",
+    "updatedAt": "2026-03-09T18:28:40.108Z"
+  },
+  {
+    "id": "cmmjilnic000aeq54m1z4zw6c",
+    "investorId": "cmmjiljj40000eq54a3xa3s0l",
+    "name": "EduStack",
+    "sector": "EdTech",
+    "stage": "Pre-Seed",
+    "status": "active",
+    "entryValuation": 1500000000,
+    "currentValuation": 1200000000,
+    "equityPercent": 5,
+    "currentEquityPercent": 5,
+    "investmentDate": "2023-09-10T00:00:00.000Z",
+    "description": "Adaptive learning platform for tier-2/3 city students",
+    "website": null,
+    "founderName": "Arun Patel",
+    "founderEmail": "arun@edustack.in",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-09T18:28:42.181Z",
+    "updatedAt": "2026-03-09T18:28:42.181Z"
+  },
+  {
+    "id": "cmmjilp38000eeq543ndt50ee",
+    "investorId": "cmmjiljj40000eq54a3xa3s0l",
+    "name": "GreenLoop",
+    "sector": "CleanTech",
+    "stage": "Seed",
+    "status": "exited",
+    "entryValuation": 2000000000,
+    "currentValuation": 2000000000,
+    "equityPercent": 6,
+    "currentEquityPercent": 6,
+    "investmentDate": "2022-11-01T00:00:00.000Z",
+    "description": "Circular economy platform for industrial waste recycling",
+    "website": null,
+    "founderName": "Meera Desai",
+    "founderEmail": "meera@greenloop.co",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-09T18:28:44.228Z",
+    "updatedAt": "2026-03-09T18:28:44.228Z"
+  },
+  {
+    "id": "cmmjilqo4000ieq54w2adqi7c",
+    "investorId": "cmmjiljj40000eq54a3xa3s0l",
+    "name": "CropMind",
+    "sector": "AgriTech",
+    "stage": "Pre-Seed",
+    "status": "active",
+    "entryValuation": 1000000000,
+    "currentValuation": 950000000,
+    "equityPercent": 3.5,
+    "currentEquityPercent": 3.5,
+    "investmentDate": "2024-01-05T00:00:00.000Z",
+    "description": "AI crop disease detection from satellite imagery",
+    "website": "https://cropmind.ai",
+    "founderName": "Vikram Singh",
+    "founderEmail": "vikram@cropmind.ai",
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-09T18:28:46.276Z",
+    "updatedAt": "2026-03-09T18:28:46.276Z"
+  },
+  {
+    "id": "cmmkopkbi0002eq9st7ywf97h",
+    "investorId": "cmmkootth0000eq9s895yyim0",
+    "name": "Test",
+    "sector": "FinTech",
+    "stage": "Seed",
+    "status": "active",
+    "entryValuation": 1000000,
+    "currentValuation": 1000000,
+    "equityPercent": 1,
+    "currentEquityPercent": 1,
+    "investmentDate": "2026-03-10T00:00:00.000Z",
+    "description": "",
+    "website": null,
+    "founderName": "",
+    "founderEmail": null,
+    "notes": null,
+    "coInvestors": null,
+    "updateDueDay": 10,
+    "createdAt": "2026-03-10T14:07:28.542Z",
+    "updatedAt": "2026-03-10T14:07:28.542Z"
+  }
+]
+--- USERS ---
+[
+  {
+    "id": "cmmjimag3001req54zxnkrqda",
+    "name": "Ravi Kumar",
+    "email": "ravi@finly.in",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmjimbzc001ueq542zcc1qxt",
+    "name": "Priya Sharma",
+    "email": "priya@healthnode.io",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmkp8b2f0000eqqojdqkk5b8",
+    "name": "Company",
+    "email": "company@gmail.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmf76ye0001p27ntewmt76y",
+    "name": "founder",
+    "email": "foundertest100@test.com",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmkootth0000eq9s895yyim0",
+    "name": "Testing",
+    "email": "testing@gmail.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmkqbbi40000eqls7jz2kzh4",
+    "name": "company",
+    "email": "company1@gmail.com",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmmf5a9v0000p2cffn3shsyc",
+    "name": "founder",
+    "email": "foundertest99@test.com",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmmf5n0a0001p2cfvh8qg7ez",
+    "name": "test user",
+    "email": "testregister3@test.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmf74nu0000p27ntdj87o8t",
+    "name": "test user",
+    "email": "testregister4@test.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmgp03f0000p2qpkr4q88vd",
+    "name": "Test Founder",
+    "email": "test-founder@example.com",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmmgq38z000bp29wvikj9gd1",
+    "name": "test user",
+    "email": "testregister300@test.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmgrdxt000cp29wijc8cs1b",
+    "name": "Inv1",
+    "email": "inv1@test.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmgshcs000dp29w0kfxm438",
+    "name": "Inv1",
+    "email": "inv1_new@test.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmgsot3000qp29wryszd7cc",
+    "name": "Founder 1",
+    "email": "founder1_new@test.com",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmmgtego000rp29wdx79cmei",
+    "name": "Inv1",
+    "email": "inv1_500@test.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmgtkj50014p29w4p2gioo3",
+    "name": "Founder 1",
+    "email": "founder1_500@test.com",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmmgud4k0015p29w4eapxhfz",
+    "name": "Inv1",
+    "email": "inv1_700@test.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmguk59001ip29wjcc3dcp9",
+    "name": "Founder 1",
+    "email": "founder1_700@test.com",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmmgxpz20000p23dsr59hrtl",
+    "name": "Inv1",
+    "email": "inv1_800@test.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmgxwm4000dp23dk6xkl7mp",
+    "name": "Founder 1",
+    "email": "founder1_800@test.com",
+    "role": "COMPANY_USER"
+  },
+  {
+    "id": "cmmjiljj40000eq54a3xa3s0l",
+    "name": "Arjun Mehta",
+    "email": "investor@portfolioos.com",
+    "role": "INVESTOR"
+  },
+  {
+    "id": "cmmmggob40000p29w5ekhxwll",
+    "name": "sasha warren",
+    "email": "s1@gmail.com",
+    "role": "COMPANY_USER"
+  }
+]
+--- INVITES ---
+[
+  {
+    "id": "cmmmgj80x0004p29w41v87ltp",
+    "startupId": "cmmmgj7de0002p29wmxqs1z6j",
+    "invitedBy": "cmmjiljj40000eq54a3xa3s0l",
+    "email": "s1@gmail.com",
+    "token": "36c8a732534a4ec90b401ce6bf38e1df4e98376683f94f5e5b2e1dddd8981e60",
+    "status": "ACCEPTED",
+    "companyRole": "admin",
+    "invitedAt": "2026-03-11T19:54:08.097Z",
+    "resentAt": null,
+    "acceptedAt": "2026-03-11T20:09:53.868Z",
+    "revokedAt": null,
+    "expiresAt": "2026-03-18T19:54:08.096Z"
+  },
+  {
+    "id": "cmmkwycxx0001eqgwl7on78cr",
+    "startupId": "cmmjilka50002eq54a95wnhy9",
+    "invitedBy": "cmmjiljj40000eq54a3xa3s0l",
+    "email": "test-founder@example.com",
+    "token": "a461d8001cdee7abe00086afd1b4b88c5a0a7154473d08c6340dc7659281b69c",
+    "status": "ACCEPTED",
+    "companyRole": "admin",
+    "invitedAt": "2026-03-10T17:58:15.813Z",
+    "resentAt": null,
+    "acceptedAt": "2026-03-11T19:58:40.010Z",
+    "revokedAt": null,
+    "expiresAt": "2026-03-11T17:58:15.811Z"
+  },
+  {
+    "id": "cmmmgsjxg000hp29w3nz2jafp",
+    "startupId": "cmmmgsjas000fp29wbfotyao7",
+    "invitedBy": "cmmmgshcs000dp29w0kfxm438",
+    "email": "founder1_new@test.com",
+    "token": "2feaf8b6024c4520c00cfb5aa00067bc96303d605261a8277e5a87d6e042fa7a",
+    "status": "PENDING",
+    "companyRole": "admin",
+    "invitedAt": "2026-03-11T20:01:23.429Z",
+    "resentAt": null,
+    "acceptedAt": null,
+    "revokedAt": null,
+    "expiresAt": "2026-03-18T20:01:23.428Z"
+  },
+  {
+    "id": "cmmmgtgp1000vp29w20t4ejf2",
+    "startupId": "cmmmgtg57000tp29wcydbsppf",
+    "invitedBy": "cmmmgtego000rp29wdx79cmei",
+    "email": "founder1_500@test.com",
+    "token": "feee900c050fa59aaa8e14d5daba122310f5bb9a1933f4ea791e93685ae99ab6",
+    "status": "PENDING",
+    "companyRole": "admin",
+    "invitedAt": "2026-03-11T20:02:05.894Z",
+    "resentAt": null,
+    "acceptedAt": null,
+    "revokedAt": null,
+    "expiresAt": "2026-03-18T20:02:05.892Z"
+  },
+  {
+    "id": "cmmmgugb10019p29w78l7il3h",
+    "startupId": "cmmmgufof0017p29w57k39nne",
+    "invitedBy": "cmmmgud4k0015p29w4eapxhfz",
+    "email": "founder1_700@test.com",
+    "token": "12b8eee067e67e830c800e069ff79b95c6856179acf70de8a7c91a440eb1f064",
+    "status": "PENDING",
+    "companyRole": "admin",
+    "invitedAt": "2026-03-11T20:02:52.045Z",
+    "resentAt": null,
+    "acceptedAt": null,
+    "revokedAt": null,
+    "expiresAt": "2026-03-18T20:02:52.044Z"
+  },
+  {
+    "id": "cmmmgxs900004p23d7fdzrnf3",
+    "startupId": "cmmmgxrop0002p23d1z1mj2d8",
+    "invitedBy": "cmmmgxpz20000p23dsr59hrtl",
+    "email": "founder1_800@test.com",
+    "token": "7067d77b204793634a951042c1671f2365c8c8c0c61ae361de6819f67f12edcc",
+    "status": "ACCEPTED",
+    "companyRole": "admin",
+    "invitedAt": "2026-03-11T20:05:27.493Z",
+    "resentAt": null,
+    "acceptedAt": "2026-03-11T20:05:37.954Z",
+    "revokedAt": null,
+    "expiresAt": "2026-03-18T20:05:27.490Z"
+  }
+]
+--- MEMBERSHIPS ---
+[
+  {
+    "id": "cmmmgp1kz0002p2qpbpk4fjbr",
+    "userId": "cmmmgp03f0000p2qpkr4q88vd",
+    "startupId": "cmmjilka50002eq54a95wnhy9",
+    "role": "admin",
+    "joinedAt": "2026-03-11T19:58:39.682Z"
+  },
+  {
+    "id": "cmmmgy03i000fp23djfdqmhov",
+    "userId": "cmmmgxwm4000dp23dk6xkl7mp",
+    "startupId": "cmmmgxrop0002p23d1z1mj2d8",
+    "role": "admin",
+    "joinedAt": "2026-03-11T20:05:37.662Z"
+  },
+  {
+    "id": "cmmmh3hkd000jp23d68rg9i6u",
+    "userId": "cmmmggob40000p29w5ekhxwll",
+    "startupId": "cmmmgj7de0002p29wmxqs1z6j",
+    "role": "admin",
+    "joinedAt": "2026-03-11T20:09:53.581Z"
+  }
+]
