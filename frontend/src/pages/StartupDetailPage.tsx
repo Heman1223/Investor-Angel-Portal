@@ -13,6 +13,7 @@ import {
     GitBranch, Activity, Mail, MessageSquare, ShieldCheck
 } from 'lucide-react';
 import { startupsAPI, updatesAPI, documentsAPI, cashflowsAPI, inviteAPI, messagingAPI } from '../services/api';
+import { useSocket } from '../context/SocketContext';
 import {
     formatCurrencyCompact, formatPercent, formatDate,
     formatMonth, formatRunway, paiseToRupees
@@ -730,12 +731,13 @@ function DilutionTab({ startup }: { startup: any }) {
 /* ═══ MESSAGING TAB ═══ */
 function MessagingTab({ startupId }: { startupId: string }) {
     const qc = useQueryClient();
+    const { socket } = useSocket();
     const [msg, setMsg] = useState('');
     const { data: conv } = useQuery({
         queryKey: ['conversation', startupId],
         queryFn: async () => {
             try {
-                const res = await messagingAPI.getConversationByStartup(startupId);
+                const res = await messagingAPI.getMessages(startupId);
                 return res.data.data;
             } catch (e: any) {
                 if (e.response?.status === 404) return null; // No conversation yet
@@ -751,12 +753,29 @@ function MessagingTab({ startupId }: { startupId: string }) {
     });
 
     useEffect(() => {
-        if (conv?.id) {
-            messagingAPI.markSeenByStartup(startupId).then(() => {
+        if (conv?.conversation?.id) {
+            messagingAPI.markSeen(startupId).then(() => {
                 qc.invalidateQueries({ queryKey: ['unreadMessages'] });
             });
         }
     }, [conv, startupId, qc]);
+
+    useEffect(() => {
+        if (!socket || !startupId) return;
+        socket.emit('join_startup', startupId);
+
+        const handleNewMessage = (data: any) => {
+            if (data.startupId === startupId) {
+                qc.invalidateQueries({ queryKey: ['conversation', startupId] });
+            }
+        };
+
+        socket.on('new_message', handleNewMessage);
+        return () => {
+            socket.emit('leave_startup', startupId);
+            socket.off('new_message', handleNewMessage);
+        };
+    }, [socket, startupId, qc]);
 
     const messages = conv?.messages || [];
 
@@ -765,7 +784,7 @@ function MessagingTab({ startupId }: { startupId: string }) {
             <div className="sd-card-hd-flush"><h3 className="sd-card-title">Investor-Company Messages</h3></div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {messages.length === 0 && <p className="sd-empty-text">No messages yet. Send the first message to start the conversation.</p>}
-                {messages.map((m: any) => {
+                {[...messages].reverse().map((m: any) => {
                     const isMe = m.sender?.role === 'INVESTOR';
                     return (
                         <div key={m.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '75%', display: 'flex', flexDirection: 'column' }}>

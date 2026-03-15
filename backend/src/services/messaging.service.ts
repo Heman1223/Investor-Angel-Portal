@@ -7,14 +7,18 @@ import { sendNewMessageEmail } from './notification.service';
  * Get or create a conversation for a startup.
  * One conversation per startup.
  */
-export async function getOrCreateConversation(startupId: string) {
+/**
+ * Get or create a conversation for a startup and investor.
+ * Standardizes on one private thread per [Investor, Startup] pair.
+ */
+export async function getOrCreateConversation(investorId: string, startupId: string) {
     let conversation = await prisma.startupConversation.findUnique({
-        where: { startupId }
+        where: { investorId_startupId: { investorId, startupId } }
     });
 
     if (!conversation) {
         conversation = await prisma.startupConversation.create({
-            data: { startupId }
+            data: { investorId, startupId }
         });
     }
 
@@ -53,10 +57,21 @@ async function verifyMessagingAccess(userId: string, role: string, startupId: st
 /**
  * Get messages for a startup conversation.
  */
-export async function getMessages(userId: string, role: string, startupId: string, cursor?: string, limit: number = 50) {
+/**
+ * Get messages for a startup conversation.
+ * Optional investorId for COMPANY_USER to specify which thread.
+ */
+export async function getMessages(userId: string, role: string, startupId: string, targetInvestorId?: string, cursor?: string, limit: number = 50) {
+    // Determine which conversation thread we're in
+    const investorId = role === 'INVESTOR' ? userId : targetInvestorId;
+
+    if (!investorId) {
+        throw createAppError('Investor ID is required for this thread', 400, 'BAD_REQUEST');
+    }
+
     await verifyMessagingAccess(userId, role, startupId);
 
-    const conversation = await getOrCreateConversation(startupId);
+    const conversation = await getOrCreateConversation(investorId, startupId);
 
     const where: any = { conversationId: conversation.id };
     if (cursor) {
@@ -77,13 +92,19 @@ export async function getMessages(userId: string, role: string, startupId: strin
         }
     });
 
-    return messages.map(m => ({
-        ...m,
-        isRead: m.reads.length > 0,
-        reads: undefined,
-    }));
+    return {
+        conversation,
+        messages: messages.map(m => ({
+            ...m,
+            isRead: m.reads.length > 0,
+            reads: undefined,
+        }))
+    };
 }
 
+/**
+ * Send a message in a startup conversation.
+ */
 /**
  * Send a message in a startup conversation.
  */
@@ -92,11 +113,18 @@ export async function sendMessage(
     role: string,
     startupId: string,
     body: string,
+    targetInvestorId?: string,
     messageType: string = 'TEXT'
 ) {
+    const investorId = role === 'INVESTOR' ? userId : targetInvestorId;
+
+    if (!investorId) {
+        throw createAppError('Target investor ID is required', 400, 'BAD_REQUEST');
+    }
+
     await verifyMessagingAccess(userId, role, startupId);
 
-    const conversation = await getOrCreateConversation(startupId);
+    const conversation = await getOrCreateConversation(investorId, startupId);
 
     const message = await prisma.$transaction(async (tx) => {
         const msg = await tx.startupMessage.create({
@@ -129,21 +157,25 @@ export async function sendMessage(
     });
 
     try {
-        getIO().to(`startup_${startupId}`).emit('new_message', message);
-    } catch (err) {
-        // Socket not initialized or error, swallow
-    }
+        // Emit to both startup room and investor-startup specific room
+        getIO().to(`startup_${startupId}`).emit('new_message', { ...message, startupId });
+        getIO().to(`conv_${conversation.id}`).emit('new_message', message);
+    } catch (err) { }
 
     // Dispatch emails
     try {
-        const startupInfo = await prisma.startup.findUnique({ where: { id: startupId }, include: { investor: true } });
-        const allInvestments = await prisma.investment.findMany({ where: { startupId }, include: { investor: true } });
-        const allMemberships = await prisma.companyMembership.findMany({ where: { startupId }, include: { user: true } });
+        const startupInfo = await prisma.startup.findUnique({ where: { id: startupId } });
+        const targetInvestor = await prisma.investor.findUnique({ where: { id: investorId } });
+        const companyUsers = await prisma.companyMembership.findMany({ where: { startupId }, include: { user: true } });
 
         const recipients = new Map<string, any>();
-        allInvestments.forEach(i => recipients.set(i.investorId, i.investor));
-        allMemberships.forEach(m => recipients.set(m.userId, m.user));
-        if (startupInfo) recipients.set(startupInfo.investorId, startupInfo.investor);
+        if (role === 'COMPANY_USER') {
+            // Recipient is the investor
+            if (targetInvestor) recipients.set(targetInvestor.id, targetInvestor);
+        } else {
+            // Recipients are all company members
+            companyUsers.forEach(m => recipients.set(m.userId, m.user));
+        }
 
         // Remove sender
         recipients.delete(userId);
@@ -151,12 +183,18 @@ export async function sendMessage(
         const senderData = message.sender || { name: 'Someone', role: 'INVESTOR' };
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const threadUrl = senderData.role === 'COMPANY_USER'
-            ? `${frontendUrl}/portfolio/${startupId}`
-            : `${frontendUrl}/company/messaging`;
+            ? `${frontendUrl}/portfolio/${startupId}?tab=messages`
+            : `${frontendUrl}/company/messaging?startupId=${startupId}&investorId=${investorId}`;
 
         for (const [id, user] of recipients.entries()) {
-            if (user.notificationPreference === 'IMMEDIATE') {
-                await sendNewMessageEmail(user.email, startupInfo?.name || 'A startup', senderData.name, body.substring(0, 100) + (body.length > 100 ? '...' : ''), threadUrl).catch(() => { });
+            if (user.notificationPreference === 'IMMEDIATE' && user.email) {
+                await sendNewMessageEmail(
+                    user.email,
+                    startupInfo?.name || 'A startup',
+                    senderData.name,
+                    body.substring(0, 100) + (body.length > 100 ? '...' : ''),
+                    threadUrl
+                ).catch(() => { });
             }
         }
     } catch (err) { }
@@ -167,11 +205,17 @@ export async function sendMessage(
 /**
  * Mark all messages in a startup conversation as seen by the user.
  */
-export async function markMessagesSeen(userId: string, role: string, startupId: string) {
+/**
+ * Mark all messages in a startup conversation as seen by the user.
+ */
+export async function markMessagesSeen(userId: string, role: string, startupId: string, targetInvestorId?: string) {
+    const investorId = role === 'INVESTOR' ? userId : targetInvestorId;
+    if (!investorId) return { marked: 0 };
+
     await verifyMessagingAccess(userId, role, startupId);
 
     const conversation = await prisma.startupConversation.findUnique({
-        where: { startupId }
+        where: { investorId_startupId: { investorId, startupId } }
     });
     if (!conversation) return { marked: 0 };
 
@@ -201,6 +245,40 @@ export async function markMessagesSeen(userId: string, role: string, startupId: 
     } catch (err) { }
 
     return { marked: unreadMessages.length };
+}
+
+/**
+ * Get all conversations for a startup.
+ * Useful for COMPANY_USER to see all investor threads.
+ */
+export async function getConversationsForStartup(userId: string, role: string, startupId: string) {
+    await verifyMessagingAccess(userId, role, startupId);
+
+    const conversations = await prisma.startupConversation.findMany({
+        where: { startupId },
+        include: {
+            investor: { select: { id: true, name: true, email: true } },
+            messages: {
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+                include: {
+                    reads: {
+                        where: { userId },
+                        select: { seenAt: true }
+                    }
+                }
+            }
+        },
+        orderBy: { lastMessageAt: 'desc' }
+    });
+
+    return conversations.map(c => ({
+        ...c,
+        unreadCount: 0, // Simplified for now, or could count more accurately
+        latestMessage: c.messages[0] || null,
+        isUnread: c.messages[0] ? c.messages[0].reads.length === 0 : false,
+        messages: undefined,
+    }));
 }
 
 /**
@@ -238,7 +316,10 @@ export async function getUnreadMessageCount(userId: string, role: string, startu
     if (startupIds.length === 0) return { count: 0 };
 
     const conversations = await prisma.startupConversation.findMany({
-        where: { startupId: { in: startupIds } },
+        where: { 
+            startupId: { in: startupIds },
+            investorId: role === 'INVESTOR' ? userId : undefined
+        },
         select: { id: true }
     });
 

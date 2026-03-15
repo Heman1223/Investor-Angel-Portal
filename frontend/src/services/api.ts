@@ -220,12 +220,23 @@ export const inviteAPI = {
 
 // Messaging
 export const messagingAPI = {
-    getConversations: (startupId: string) => api.get(`/messaging/${startupId}`),
-    getMessages: (conversationId: string) => api.get(`/messaging/conversations/${conversationId}/messages`),
-    sendMessage: (conversationId: string, content: string) => api.post(`/messaging/conversations/${conversationId}/messages`, { content }),
-    markRead: (conversationId: string) => api.post(`/messaging/conversations/${conversationId}/read`),
+    // For Investors (gets their private thread for a startup)
+    getMessages: (startupId: string, investorId?: string) =>
+        api.get(`/messaging/startups/${startupId}/messages`, { params: { investorId } }),
+
+    // For Startups (gets all investor threads for this startup)
+    getThreads: (startupId: string) =>
+        api.get(`/messaging/startups/${startupId}/threads`),
+
+    // Send a message
+    sendMessage: (startupId: string, body: string, investorId?: string) =>
+        api.post(`/messaging/startups/${startupId}/messages`, { body, investorId }),
+
+    // Mark messages as seen
+    markSeen: (startupId: string, investorId?: string) =>
+        api.post(`/messaging/startups/${startupId}/messages/mark-seen`, {}, { params: { investorId } }),
+
+    // Unread counts
     getUnreadCount: (startupId?: string) =>
-        api.get(startupId ? `/startups/${startupId}/messages/unread-count` : `/messages/unread-count`),
-    markSeenByStartup: (startupId: string) => api.post(`/startups/${startupId}/messages/mark-seen`),
-    getConversationByStartup: (startupId: string) => api.get(`/startups/${startupId}/messages`), // Same as getConversations
+        api.get(startupId ? `/messaging/startups/${startupId}/messages/unread-count` : `/messaging/unread-count`),
 };

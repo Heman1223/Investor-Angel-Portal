@@ -228,15 +228,22 @@ export async function getInviteByToken(token: string) {
 }
 
 export async function loginInvestor(email: string, password: string) {
-    const investor = await prisma.investor.findUnique({ where: { email: email.toLowerCase() } });
+    const emailLower = email.toLowerCase().trim();
+    console.log(`[AuthDebug] Login attempt for email: "${emailLower}"`);
+    
+    const investor = await prisma.investor.findUnique({ where: { email: emailLower } });
     if (!investor) {
+        console.log(`[AuthDebug] User not found: "${emailLower}"`);
         throw createAppError('Invalid email or password', 401, 'UNAUTHORIZED');
     }
+    console.log(`[AuthDebug] User found: "${investor.email}" with role: ${investor.role}`);
 
     const isValid = await bcrypt.compare(password, investor.passwordHash);
     if (!isValid) {
+        console.log(`[AuthDebug] Password mismatch for: "${investor.email}"`);
         throw createAppError('Invalid email or password', 401, 'UNAUTHORIZED');
     }
+    console.log(`[AuthDebug] Password valid for: "${investor.email}"`);
 
     // Update last login
     const updatedInvestor = await prisma.investor.update({

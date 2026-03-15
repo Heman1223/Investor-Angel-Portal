@@ -398,7 +398,7 @@ async function seed() {
 
     // 10. Seed Messaging Conversations and Messages
     const finlyConv = await prisma.startupConversation.create({
-        data: { startupId: finly.id }
+        data: { investorId, startupId: finly.id }
     });
 
     await prisma.startupMessage.create({
@@ -425,7 +425,7 @@ async function seed() {
     });
 
     const hnConv = await prisma.startupConversation.create({
-        data: { startupId: healthNode.id }
+        data: { investorId, startupId: healthNode.id }
     });
 
     await prisma.startupMessage.create({

@@ -6,7 +6,17 @@ import * as startupService from '../services/startup.service';
 export async function getMyStartups(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
         const startups = await companyUpdateService.getCompanyStartups(req.investor!.id);
-        res.json({ success: true, data: startups });
+        // Also fetch updates to count drafts
+        const updates = await companyUpdateService.getAllCompanyUpdates(req.investor!.id);
+        const pendingUpdatesCount = updates.filter(u => u.status === 'DRAFT').length;
+        
+        res.json({ 
+            success: true, 
+            data: { 
+                startups, 
+                pendingUpdatesCount 
+            } 
+        });
     } catch (error) { next(error); }
 }
 

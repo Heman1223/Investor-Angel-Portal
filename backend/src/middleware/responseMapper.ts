@@ -6,7 +6,7 @@ import { Request, Response, NextFunction } from 'express';
  * without requiring frontend modifications or duplicating logic in all controllers.
  */
 function mapIdToUnderscoreId(obj: any): any {
-    if (obj === null || typeof obj !== 'object') {
+    if (obj === null || typeof obj !== 'object' || obj instanceof Date) {
         return obj;
     }
 
@@ -17,11 +17,10 @@ function mapIdToUnderscoreId(obj: any): any {
     const mapped: any = {};
     for (const key in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            let newKey = key;
             if (key === 'id') {
-                newKey = '_id';
+                mapped['_id'] = mapIdToUnderscoreId(obj[key]);
             }
-            mapped[newKey] = mapIdToUnderscoreId(obj[key]);
+            mapped[key] = mapIdToUnderscoreId(obj[key]);
         }
     }
     return mapped;

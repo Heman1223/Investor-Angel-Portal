@@ -11,6 +11,7 @@ export default function CompanyMessaging() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [newMessage, setNewMessage] = useState('');
     const [selectedStartupId, setSelectedStartupId] = useState<string>('');
+    const [selectedInvestorId, setSelectedInvestorId] = useState<string>('');
 
     const { data: dashboard, isLoading: dashLoading } = useQuery({
         queryKey: ['companyDashboard'],
@@ -28,26 +29,51 @@ export default function CompanyMessaging() {
         }
     }, [startups, selectedStartupId]);
 
-    const { data: convData, isLoading: convLoading } = useQuery({
-        queryKey: ['messaging', selectedStartupId],
+    // Fetch threads (investors) for the selected startup
+    const { data: threadsData, isLoading: threadsLoading } = useQuery({
+        queryKey: ['messaging', 'threads', selectedStartupId],
         queryFn: async () => {
-            if (!selectedStartupId) return null;
-            const res = await messagingAPI.getConversations(selectedStartupId);
-            return res.data;
+            if (!selectedStartupId) return [];
+            const res = await messagingAPI.getThreads(selectedStartupId);
+            return res.data.data;
         },
         enabled: !!selectedStartupId,
+    });
+
+    const threads = threadsData || [];
+
+    useEffect(() => {
+        if (threads.length > 0 && !selectedInvestorId) {
+            setSelectedInvestorId(threads[0].investorId);
+        } else if (threads.length === 0) {
+            setSelectedInvestorId('');
+        }
+    }, [threads, selectedInvestorId]);
+
+    const { data: convData, isLoading: convLoading } = useQuery({
+        queryKey: ['messaging', 'messages', selectedStartupId, selectedInvestorId],
+        queryFn: async () => {
+            if (!selectedStartupId || !selectedInvestorId) return null;
+            const res = await messagingAPI.getMessages(selectedStartupId, selectedInvestorId);
+            return res.data.data;
+        },
+        enabled: !!selectedStartupId && !!selectedInvestorId,
         refetchInterval: 5000
     });
 
-    const conversation = convData?.data?.conversation;
-    const messages = convData?.data?.messages || [];
+    const messages = convData?.messages || [];
 
     useEffect(() => {
         if (!socket || !selectedStartupId) return;
         socket.emit('join_startup', selectedStartupId);
-        const handleNewMessage = () => {
-            queryClient.invalidateQueries({ queryKey: ['messaging', selectedStartupId] });
+        
+        const handleNewMessage = (data: any) => {
+            if (data.startupId === selectedStartupId) {
+                queryClient.invalidateQueries({ queryKey: ['messaging', 'threads', selectedStartupId] });
+                queryClient.invalidateQueries({ queryKey: ['messaging', 'messages', selectedStartupId] });
+            }
         };
+
         socket.on('new_message', handleNewMessage);
         return () => {
             socket.emit('leave_startup', selectedStartupId);
@@ -62,27 +88,28 @@ export default function CompanyMessaging() {
     }, [messages]);
 
     useEffect(() => {
-        if (conversation?.id) {
-            messagingAPI.markRead(conversation.id).catch(console.error);
+        if (selectedStartupId && selectedInvestorId) {
+            messagingAPI.markSeen(selectedStartupId, selectedInvestorId).catch(console.error);
             queryClient.invalidateQueries({ queryKey: ['companyDashboard'] });
         }
-    }, [conversation?.id, queryClient, messages.length]);
+    }, [selectedStartupId, selectedInvestorId, queryClient, messages.length]);
 
     const sendMutation = useMutation({
         mutationFn: async (content: string) => {
-            if (!conversation?.id) throw new Error("No conversation");
-            return await messagingAPI.sendMessage(conversation.id, content);
+            if (!selectedStartupId || !selectedInvestorId) throw new Error("Missing selection");
+            return await messagingAPI.sendMessage(selectedStartupId, content, selectedInvestorId);
         },
         onSuccess: () => {
             setNewMessage('');
-            queryClient.invalidateQueries({ queryKey: ['messaging', selectedStartupId] });
+            queryClient.invalidateQueries({ queryKey: ['messaging', 'messages', selectedStartupId, selectedInvestorId] });
+            queryClient.invalidateQueries({ queryKey: ['messaging', 'threads', selectedStartupId] });
         },
         onError: () => toast.error('Failed to send message')
     });
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !conversation?.id) return;
+        if (!newMessage.trim() || !selectedStartupId || !selectedInvestorId) return;
         sendMutation.mutate(newMessage);
     };
 
@@ -107,30 +134,57 @@ export default function CompanyMessaging() {
     );
 
     const activeStartup = startups.find((s: any) => s.id === selectedStartupId);
+    const activeThread = threads.find((t: any) => t.investorId === selectedInvestorId);
 
     return (
         <>
             <style>{MSG_CSS}</style>
             <div className="m-root">
                 <div className="m-layout">
-                    {/* Sidebar / Selector */}
-                    {startups.length > 1 && (
-                        <div className="m-side">
-                            <h4 className="m-side-title">STARTUPS</h4>
-                            <div className="m-side-list">
-                                {startups.map((s: any) => (
-                                    <button
-                                        key={s.id}
-                                        className={`m-side-item${selectedStartupId === s.id ? ' on' : ''}`}
-                                        onClick={() => setSelectedStartupId(s.id)}
-                                    >
-                                        <div className="m-side-avatar">{s.name[0]}</div>
-                                        <span>{s.name}</span>
-                                    </button>
-                                ))}
-                            </div>
+                    {/* Sidebar / Startup Selector */}
+                    <div className="m-side">
+                        <h4 className="m-side-title">STARTUPS</h4>
+                        <div className="m-side-list">
+                            {startups.map((s: any) => (
+                                <button
+                                    key={s.id}
+                                    className={`m-side-item${selectedStartupId === s.id ? ' on' : ''}`}
+                                    onClick={() => {
+                                        setSelectedStartupId(s.id);
+                                        setSelectedInvestorId(''); // Reset investor selection when startup changes
+                                    }}
+                                >
+                                    <div className="m-side-avatar">{s.name[0]}</div>
+                                    <span>{s.name}</span>
+                                </button>
+                            ))}
                         </div>
-                    )}
+
+                        {selectedStartupId && (
+                            <>
+                                <h4 className="m-side-title" style={{ marginTop: 20 }}>INVESTORS</h4>
+                                <div className="m-side-list">
+                                    {threads.length === 0 && !threadsLoading ? (
+                                        <p style={{ fontSize: 11, color: '#3d4f68', padding: '0 10px' }}>No active investor threads yet.</p>
+                                    ) : (
+                                        threads.map((t: any) => (
+                                            <button
+                                                key={t.id}
+                                                className={`m-side-item${selectedInvestorId === t.investorId ? ' on' : ''}`}
+                                                onClick={() => setSelectedInvestorId(t.investorId)}
+                                            >
+                                                <div className="m-side-avatar" style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399' }}>{t.investor.name[0]}</div>
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ fontSize: 12 }}>{t.investor.name}</span>
+                                                    {t.isUnread && <span style={{ fontSize: 8, color: '#d4a843', fontWeight: 800 }}>NEW MESSAGE</span>}
+                                                </div>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
 
                     {/* Chat Area */}
                     <div className="m-chat">
@@ -140,7 +194,9 @@ export default function CompanyMessaging() {
                                     <Shield size={18} />
                                 </div>
                                 <div className="m-chat-text">
-                                    <h2 className="m-chat-title">{activeStartup?.name || 'Investor Group'}</h2>
+                                    <h2 className="m-chat-title">
+                                        {activeThread ? `Chat with ${activeThread.investor.name}` : (activeStartup?.name || 'Investor Group')}
+                                    </h2>
                                     <div className="m-chat-status">
                                         <div className="m-status-dot" />
                                         <span>Secure Investor Channel</span>
@@ -154,20 +210,26 @@ export default function CompanyMessaging() {
                                 <div className="m-chat-loading">
                                     <div className="m-spinner" />
                                 </div>
+                            ) : !selectedInvestorId ? (
+                                <div className="m-chat-empty">
+                                    <MessageSquare size={32} />
+                                    <p>Select an investor thread to start chatting</p>
+                                </div>
                             ) : messages.length === 0 ? (
                                 <div className="m-chat-empty">
                                     <MessageSquare size={32} />
-                                    <p>Start a conversation with your investors</p>
+                                    <p>Start a conversation with {activeThread?.investor.name}</p>
                                 </div>
                             ) : (
-                                messages.map((msg: any, i: number) => {
+                                [...messages].reverse().map((msg: any, i: number) => {
+                                    const reversedMessages = [...messages].reverse();
                                     const isMe = msg.sender?.role === 'COMPANY_USER';
-                                    const showName = i === 0 || messages[i - 1].sender?.id !== msg.sender?.id;
+                                    const showName = i === 0 || reversedMessages[i - 1].sender?.id !== msg.sender?.id;
                                     return (
                                         <div key={msg.id} className={`m-msg-row ${isMe ? 'mine' : 'theirs'}`}>
                                             {!isMe && showName && <span className="m-msg-name">{msg.sender?.name || 'Investor'}</span>}
                                             <div className="m-msg-bubble">
-                                                {msg.content}
+                                                {msg.body}
                                                 <div className="m-msg-time">
                                                     <Clock size={8} />
                                                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -186,12 +248,12 @@ export default function CompanyMessaging() {
                                     value={newMessage}
                                     onChange={e => setNewMessage(e.target.value)}
                                     placeholder="Type a message to your investors..."
-                                    disabled={!conversation || sendMutation.isPending}
+                                    disabled={!selectedInvestorId || sendMutation.isPending}
                                     className="m-input"
                                 />
                                 <button
                                     type="submit"
-                                    disabled={!newMessage.trim() || !conversation || sendMutation.isPending}
+                                    disabled={!newMessage.trim() || !selectedInvestorId || sendMutation.isPending}
                                     className="m-send-btn"
                                 >
                                     <Send size={18} />

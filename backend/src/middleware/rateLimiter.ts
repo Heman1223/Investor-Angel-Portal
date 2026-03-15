@@ -1,13 +1,13 @@
 import rateLimit from 'express-rate-limit';
 
 export const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Effectively disabled for development
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 10000, // Effectively disabled
     message: {
         success: false,
         error: {
             code: 'RATE_LIMITED',
-            message: 'Too many login attempts. Please try again after 15 minutes.',
+            message: 'Too many login attempts.',
         },
     },
     standardHeaders: true,
@@ -16,13 +16,13 @@ export const authLimiter = rateLimit({
 });
 
 export const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
+    windowMs: 1 * 60 * 1000,
+    max: 10000,
     message: {
         success: false,
         error: {
             code: 'RATE_LIMITED',
-            message: 'Too many requests. Please try again later.',
+            message: 'Too many requests.',
         },
     },
     standardHeaders: true,
