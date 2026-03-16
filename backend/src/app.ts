@@ -44,16 +44,21 @@ const allowedOrigins = [
     'https://investor-angel-portal.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000'
-].filter(Boolean) as string[];
+].filter(Boolean).map(o => o!.trim()) as string[];
 
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+        const isAllowed = allowedOrigins.includes(origin) || 
+                         origin.endsWith('.onrender.com') ||
+                         process.env.NODE_ENV !== 'production';
+
+        if (isAllowed) {
             callback(null, true);
         } else {
+            logger.warn(`CORS blocked for origin: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },

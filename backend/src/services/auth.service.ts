@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { prisma } from '../db';
-import { Investor } from '@prisma/client';
+import { Investor, UserRole } from '@prisma/client';
 import { createAppError } from '../middleware/errorHandler';
 
 const SALT_ROUNDS = 12;
@@ -37,6 +37,7 @@ export async function registerInvestor(name: string, email: string, password: st
             name,
             email: email.toLowerCase(),
             passwordHash,
+            role: UserRole.INVESTOR,
         },
     });
 
@@ -68,7 +69,7 @@ export async function registerCompanyUserLocal(name: string, email: string, pass
             name,
             email: email.toLowerCase(),
             passwordHash,
-            role: 'COMPANY_USER',
+            role: UserRole.COMPANY_USER,
         },
     });
 
@@ -155,7 +156,7 @@ export async function registerCompanyUser(name: string, email: string, password:
                 name,
                 email: email.toLowerCase(),
                 passwordHash,
-                role: 'COMPANY_USER',
+                role: UserRole.COMPANY_USER,
             },
         });
 
@@ -246,7 +247,8 @@ export async function loginInvestor(email: string, password: string) {
         console.log(`[AuthDebug] User not found: "${emailLower}"`);
         throw createAppError('Invalid email or password', 401, 'UNAUTHORIZED');
     }
-    console.log(`[AuthDebug] User found: "${investor.email}" with role: ${investor.role}`);
+    console.log(`[AuthDebug] User found: "${investor.email}"`);
+    console.log(`[AuthDebug] Role value: "${investor.role}", Type: ${typeof investor.role}`);
 
     const isValid = await bcrypt.compare(password, investor.passwordHash);
     if (!isValid) {
