@@ -12,9 +12,18 @@ export const errorHandler = (err: AppError, _req: Request, res: Response, _next:
     const code = err.code || 'INTERNAL_ERROR';
 
     if (statusCode === 500) {
-        logger.error('Unhandled server error:', { message: err.message, stack: err.stack, code });
+        logger.error('[ERROR] Unhandled server error:', { 
+            message: err.message, 
+            stack: err.stack, 
+            code: err.code,
+            originalError: err
+        });
     } else if (statusCode !== 401 && statusCode !== 404) {
-        logger.warn('Client error:', { message: err.message, code });
+        logger.warn('[WARN] Client error:', { 
+            message: err.message, 
+            code: err.code,
+            fields: err.fields
+        });
     }
 
     const message = statusCode === 500 ? 'Something went wrong. Please try again.' : err.message;

@@ -37,7 +37,7 @@ app.use((req, res, next) => {
 });
 
 // Request logging
-app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
+app.use(morgan('combined', { stream: { write: (message: string) => logger.info(message.trim()) } }));
 
 const allowedOrigins = [
     process.env.FRONTEND_URL,

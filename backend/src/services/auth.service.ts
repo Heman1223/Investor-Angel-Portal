@@ -229,7 +229,17 @@ export async function getInviteByToken(token: string) {
 
 export async function loginInvestor(email: string, password: string) {
     const emailLower = email.toLowerCase().trim();
-    console.log(`[AuthDebug] Login attempt for email: "${emailLower}"`);
+    console.log(`[AuthDebug] Login attempt started for: "${emailLower}"`);
+    
+    // Safety check for critical env vars
+    if (!process.env.JWT_SECRET) {
+        console.error('[CRITICAL] JWT_SECRET is not defined in environment variables!');
+        throw createAppError('Server configuration error', 500, 'CONFIG_ERROR');
+    }
+    if (!process.env.JWT_REFRESH_SECRET) {
+        console.error('[CRITICAL] JWT_REFRESH_SECRET is not defined in environment variables!');
+        throw createAppError('Server configuration error', 500, 'CONFIG_ERROR');
+    }
     
     const investor = await prisma.investor.findUnique({ where: { email: emailLower } });
     if (!investor) {
